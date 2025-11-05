@@ -15,7 +15,7 @@
     {
       "id": "lamp-preview",
       "description": "Preview of a desk lamp 3D model",
-      "imageUrl": "https://images.unsplash.com/photo-1621447980929-6638614633c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxkZXNrJTIwbGFtcHxlbnwwfHx8fDE3NjIzMTQwMDh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/models/lamp.gbl",
       "imageHint": "desk lamp"
     }
   ]
