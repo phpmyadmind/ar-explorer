@@ -15,8 +15,20 @@
     {
       "id": "lamp-preview",
       "description": "Preview of a desk lamp 3D model",
-      "imageUrl": "/models/lamp.gbl",
+      "imageUrl": "https://images.unsplash.com/photo-1621447980929-6638614633c8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxkZXNrJTIwbGFtcHxlbnwwfHx8fDE3NjIzMTQwMDh8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "desk lamp"
+    },
+    {
+      "id": "que-me-esta-pasando-preview",
+      "description": "Preview of a desk lamp 3D model",
+      "imageUrl": "/models/Cuadro No 01 EOT-que me esta pasando.jpg",
+      "imageHint": "que me esta pasando"
+    },
+    {
+      "id": "no-aguanto-mas-preview",
+      "description": "Preview of a desk lamp 3D model",
+      "imageUrl": "/models/Cuadro No 04 EOT-ya no aguanto mas.png",
+      "imageHint": "no aguanto mas"
     }
   ]
 }
