@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Loader2, VideoOff, RefreshCw, Cube } from 'lucide-react';
+import { Loader2, VideoOff, RefreshCw, Box } from 'lucide-react';
 import type { Model } from '@/lib/models';
 
 interface ARViewerProps {
@@ -169,7 +169,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
               )}
               {!model && !loading && !error && !cameraError && (
                  <div className="text-center p-8 bg-card/80 rounded-lg shadow-2xl">
-                   <Cube className="mx-auto h-12 w-12 text-primary"/>
+                   <Box className="mx-auto h-12 w-12 text-primary"/>
                    <h2 className="mt-4 text-2xl font-bold text-card-foreground">Welcome to AR Explorer</h2>
                    <p className="text-muted-foreground mt-2">Select a model from the list below to place it in your world.</p>
                  </div>
