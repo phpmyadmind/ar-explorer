@@ -3,10 +3,12 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/ar-explorer/header';
 import { ARViewer } from '@/components/ar-explorer/ar-viewer';
+import { CameraView } from '@/components/ar-explorer/camera-view';
 import { ModelSelector } from '@/components/ar-explorer/model-selector';
 import { type Model, staticModels } from '@/lib/models';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -105,9 +107,32 @@ function HomePageContent() {
   return (
     <div className="flex h-svh w-full flex-col bg-background text-foreground">
       <Header />
-      <main className="relative flex-1 overflow-hidden">
-        <ARViewer model={selectedModel} />
-        <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} />
+      <main className="grid flex-1 md:grid-cols-2 lg:grid-cols-3 overflow-hidden">
+        {/* Vista de Cámara y Modelo AR (se superponen en móvil) */}
+        <div className="relative md:col-span-1 lg:col-span-2">
+            <CameraView />
+            <ARViewer model={selectedModel} />
+        </div>
+
+        {/* Panel de Selección de Modelos (oculto en móvil, se muestra en un Sheet) */}
+        <div className="hidden md:flex md:flex-col border-l bg-muted/40">
+           <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} isDrawer={false}/>
+        </div>
+
+         {/* Botón y Sheet para el selector en móvil */}
+        <div className="md:hidden absolute bottom-4 right-4 z-20">
+          <Sheet>
+            <SheetTrigger asChild>
+                <Button size="icon">
+                    <PanelLeft />
+                    <span className="sr-only">Toggle Model Selector</span>
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="w-full h-[60%]">
+                 <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} isDrawer={true} />
+            </SheetContent>
+          </Sheet>
+        </div>
       </main>
     </div>
   );
@@ -116,7 +141,7 @@ function HomePageContent() {
 export default function Home() {
   return (
     // Suspense is required for useSearchParams
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex h-svh w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
       <HomePageContent />
     </Suspense>
   );

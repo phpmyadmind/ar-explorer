@@ -3,21 +3,28 @@
 import { FC, useState, useEffect } from 'react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
-import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { QrCode } from 'lucide-react';
+import { QrCode, Info } from 'lucide-react';
 import type { Model } from '@/lib/models';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface ModelSelectorProps {
   models: Model[];
   selectedModelId: string | null;
   onSelectModel: (model: Model) => void;
+  isDrawer?: boolean;
 }
 
-export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId, onSelectModel }) => {
+export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId, onSelectModel, isDrawer=false }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [qrModel, setQrModel] = useState<Model | null>(null);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
@@ -37,28 +44,21 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
     setIsQrDialogOpen(true);
   };
 
-  if (models.length === 0) {
-    return (
-       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/50 to-transparent p-4 z-10">
-         <div className="text-center text-white p-4 bg-black/30 rounded-lg">
-            No models available. Please add some in the admin panel.
-         </div>
-       </div>
-    )
-  }
-
-  return (
-    <>
-      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/50 to-transparent p-4 z-10">
-        <ScrollArea className="w-full whitespace-nowrap rounded-lg">
-          <div className="flex w-max space-x-4">
+  const mainContent = (
+      <>
+        <div className="p-4 border-b">
+            <CardTitle>{ isDrawer ? "Select a Model" : "AR Models"}</CardTitle>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className={cn("p-4", isDrawer ? "grid grid-cols-2 gap-4" : "flex flex-col gap-4")}>
             {models.map((model) => (
               <Card
                 key={model.id}
                 onClick={() => onSelectModel(model)}
                 className={cn(
-                  'group h-32 w-40 shrink-0 cursor-pointer overflow-hidden transition-all hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                  selectedModelId === model.id ? 'ring-2 ring-primary shadow-lg' : 'ring-0'
+                  'group shrink-0 cursor-pointer overflow-hidden transition-all hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                   selectedModelId === model.id ? 'ring-2 ring-primary shadow-lg' : 'ring-0',
+                   isDrawer ? 'h-40 w-full' : 'h-32 w-full'
                 )}
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && onSelectModel(model)}
@@ -71,31 +71,70 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
                         fill
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         data-ai-hint="product photo"
-                        sizes="200px"
+                        sizes="(max-width: 768px) 50vw, 33vw"
                         unoptimized // Required for external URLs without specific hostnames in next.config.js
                       />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="absolute top-2 right-2">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                  <div className="absolute top-1 right-1 flex gap-1">
+                     <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Info className="h-4 w-4" />
+                                  <span className="sr-only">Show Info</span>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="center">
+                                <p className="text-sm text-muted-foreground">{model.description}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white"
+                      className="h-7 w-7 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-white"
                       onClick={(e) => openQrDialog(model, e)}
                     >
                       <QrCode className="h-4 w-4" />
                       <span className="sr-only">Show QR Code</span>
                     </Button>
                   </div>
-                  <div className="absolute bottom-0 left-0 p-3">
+                  <div className="absolute bottom-0 left-0 p-2">
                     <h3 className="font-semibold text-primary-foreground text-sm">{model.name}</h3>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
-          <ScrollBar orientation="horizontal" />
         </ScrollArea>
+       </>
+    )
+
+  if (models.length === 0) {
+    return (
+       <div className="flex flex-col h-full">
+         <div className="p-4 border-b">
+            <CardTitle>{ isDrawer ? "Select a Model" : "AR Models"}</CardTitle>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+            <div className="text-center text-muted-foreground p-4 bg-background/30 rounded-lg">
+                No models available.
+            </div>
+        </div>
+       </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="flex flex-col h-full">
+        {mainContent}
       </div>
 
       <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>

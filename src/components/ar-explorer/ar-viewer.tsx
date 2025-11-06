@@ -6,7 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Loader2, VideoOff, RefreshCw, Box } from 'lucide-react';
+import { Loader2, Box, RefreshCw } from 'lucide-react';
 import type { Model } from '@/lib/models';
 
 interface ARViewerProps {
@@ -14,38 +14,13 @@ interface ARViewerProps {
 }
 
 export const ARViewer: FC<ARViewerProps> = ({ model }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cameraError, setCameraError] = useState(false);
   const videoModelRef = useRef<HTMLVideoElement>(null);
-
-  const setupCamera = async () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-          setCameraError(false);
-          setError(null);
-        }
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-        setError('Could not access the camera. Please grant permission and try again.');
-        setCameraError(true);
-      }
-    } else {
-      setError('Your browser does not support camera access.');
-      setCameraError(true);
-    }
-  };
-
+ 
   useEffect(() => {
-    setupCamera();
-
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -90,10 +65,6 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
       renderer.dispose();
     };
   }, []);
@@ -105,6 +76,9 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     // Clear previous model
     const toRemove = scene.children.filter(child => child.type === "Group");
     toRemove.forEach(child => scene.remove(child));
+    
+    // Hide and reset canvas and video element
+    if(canvasRef.current) canvasRef.current.style.display = 'none';
     if (videoModelRef.current) {
       videoModelRef.current.src = '';
       videoModelRef.current.style.display = 'none';
@@ -115,47 +89,49 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     setLoading(true);
     setError(null);
     
-    if (model.type === 'video') {
-      if (videoModelRef.current) {
-        videoModelRef.current.src = model.path;
+    if (model.type === 'video' || model.type === 'image') {
+       if (videoModelRef.current) {
         videoModelRef.current.style.display = 'block';
+        videoModelRef.current.src = model.path;
         videoModelRef.current.play();
       }
       setLoading(false);
       return;
     }
-
-    const loader = new GLTFLoader();
-    loader.load(
-      model.path,
-      (gltf) => {
-        const loadedModel = gltf.scene;
-        loadedModel.scale.set(model.scale, model.scale, model.scale);
-        
-        const box = new THREE.Box3().setFromObject(loadedModel);
-        const center = box.getCenter(new THREE.Vector3());
-        loadedModel.position.sub(center);
-        
-        scene.add(loadedModel);
-        setLoading(false);
-      },
-      undefined,
-      (err) => {
-        console.error('Error loading model:', err);
-        setError(`Failed to load model: ${model.name}. Ensure the file exists at public${model.path}.`);
-        setLoading(false);
-      }
-    );
+    
+    if (model.type === '3d-model') {
+        if(canvasRef.current) canvasRef.current.style.display = 'block';
+        const loader = new GLTFLoader();
+        loader.load(
+          model.path,
+          (gltf) => {
+            const loadedModel = gltf.scene;
+            loadedModel.scale.set(model.scale, model.scale, model.scale);
+            
+            const box = new THREE.Box3().setFromObject(loadedModel);
+            const center = box.getCenter(new THREE.Vector3());
+            loadedModel.position.sub(center);
+            
+            scene.add(loadedModel);
+            setLoading(false);
+          },
+          undefined,
+          (err) => {
+            console.error('Error loading model:', err);
+            setError(`Failed to load model: ${model.name}.`);
+            setLoading(false);
+          }
+        );
+    }
 
   }, [model]);
 
   return (
-    <div className="absolute inset-0 w-full h-full bg-black">
-      <video ref={videoRef} className="absolute top-0 left-0 w-full h-full object-cover" muted playsInline />
-      <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" />
-      <video ref={videoModelRef} loop playsInline muted className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{display: 'none', width: '90%', height: '90%', objectFit: 'contain'}} />
+    <div className="absolute inset-0 w-full h-full pointer-events-none">
+      <canvas ref={canvasRef} className="w-full h-full pointer-events-auto" style={{display: 'none'}}/>
+      <video ref={videoModelRef} loop playsInline muted className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto" style={{display: 'none', width: '90%', height: '90%', objectFit: 'contain'}} />
       
-      {(loading || error || cameraError || !model) && (
+      {(loading || error || !model) && (
          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300">
             <div className="max-w-md w-full p-4">
               {loading && (
@@ -169,25 +145,14 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
                   <AlertTitle>An Error Occurred</AlertTitle>
                   <AlertDescription className="flex flex-col gap-2">
                     {error}
-                    {(cameraError || error.includes('camera')) && <Button onClick={setupCamera} className="mt-2"><RefreshCw className="mr-2 h-4 w-4"/>Try Again</Button>}
                   </AlertDescription>
                 </Alert>
               )}
-              {cameraError && !error?.includes('camera') && (
-                <Alert variant="destructive">
-                  <VideoOff className="h-4 w-4" />
-                  <AlertTitle>Camera Not Available</AlertTitle>
-                  <AlertDescription>
-                    Could not access camera. Please check permissions.
-                    <Button onClick={setupCamera} className="mt-4"><RefreshCw className="mr-2 h-4 w-4"/>Try Again</Button>
-                  </AlertDescription>
-                </Alert>
-              )}
-              {!model && !loading && !error && !cameraError && (
+              {!model && !loading && !error && (
                  <div className="text-center p-8 bg-card/80 rounded-lg shadow-2xl">
                    <Box className="mx-auto h-12 w-12 text-primary"/>
-                   <h2 className="mt-4 text-2xl font-bold text-card-foreground">Welcome to AR Explorer</h2>
-                   <p className="text-muted-foreground mt-2">Select a model from the list below to place it in your world.</p>
+                   <h2 className="mt-4 text-2xl font-bold text-card-foreground">Welcome to AR Platform</h2>
+                   <p className="text-muted-foreground mt-2">Select a model from the list to get started.</p>
                  </div>
               )}
             </div>
