@@ -21,10 +21,9 @@ interface ModelSelectorProps {
   models: Model[];
   selectedModelId: string | null;
   onSelectModel: (model: Model) => void;
-  isDrawer?: boolean;
 }
 
-export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId, onSelectModel, isDrawer=false }) => {
+export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId, onSelectModel }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [qrModel, setQrModel] = useState<Model | null>(null);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
@@ -46,19 +45,18 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
 
   const mainContent = (
       <>
-        <div className="p-4 border-b">
-            <CardTitle>{ isDrawer ? "Select a Model" : "AR Models"}</CardTitle>
+        <div className="p-4 border-b sticky top-0 bg-muted/40 z-10">
+            <CardTitle>Select a Model</CardTitle>
         </div>
         <ScrollArea className="flex-1">
-          <div className={cn("p-4", isDrawer ? "grid grid-cols-2 gap-4" : "flex flex-col gap-4")}>
+          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {models.map((model) => (
               <Card
                 key={model.id}
                 onClick={() => onSelectModel(model)}
                 className={cn(
-                  'group shrink-0 cursor-pointer overflow-hidden transition-all hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                   selectedModelId === model.id ? 'ring-2 ring-primary shadow-lg' : 'ring-0',
-                   isDrawer ? 'h-40 w-full' : 'h-32 w-full'
+                  'group shrink-0 cursor-pointer overflow-hidden transition-all hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aspect-square',
+                   selectedModelId === model.id ? 'ring-2 ring-primary shadow-lg' : 'ring-0'
                 )}
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && onSelectModel(model)}
@@ -119,8 +117,8 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
   if (models.length === 0) {
     return (
        <div className="flex flex-col h-full">
-         <div className="p-4 border-b">
-            <CardTitle>{ isDrawer ? "Select a Model" : "AR Models"}</CardTitle>
+         <div className="p-4 border-b sticky top-0 bg-muted/40 z-10">
+            <CardTitle>Select a Model</CardTitle>
         </div>
         <div className="flex-1 flex items-center justify-center">
             <div className="text-center text-muted-foreground p-4 bg-background/30 rounded-lg">
