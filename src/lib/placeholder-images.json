@@ -29,6 +29,12 @@
       "description": "Preview of video art piece 'Ya no aguanto más'",
       "imageUrl": "/models/ya-no-aguanto-mas.png",
       "imageHint": "art video"
+    },
+    {
+      "id": "tercer-video-preview",
+      "description": "Preview of the third video art piece",
+      "imageUrl": "/models/tercer-video.jpg",
+      "imageHint": "art video"
     }
   ]
 }

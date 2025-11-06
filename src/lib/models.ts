@@ -67,4 +67,14 @@ export const models: Model[] = [
     type: 'video',
     url: '/?model=noaguanto',
   },
+  {
+    id: 'tercer-video',
+    name: 'Tercer Video',
+    path: '/models/tercer-video.mp4',
+    previewImage: getPreview('tercer-video-preview'),
+    scale: 1,
+    description: 'Esta es la descripción del tercer video.',
+    type: 'video',
+    url: '/?model=tercer-video',
+  }
 ];
