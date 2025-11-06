@@ -17,24 +17,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeSwitcher() {
-  const { setTheme, theme } = useTheme()
+  const { setTheme, theme, systemTheme } = useTheme()
 
   const handleThemeChange = (newTheme: string) => {
-    const currentTheme = theme ?? 'system';
-    const isDark = document.documentElement.classList.contains('dark');
-    
-    let themeClass = '';
-
-    if (newTheme === 'light') {
-      themeClass = 'light';
-    } else if (newTheme === 'dark') {
-      themeClass = 'dark';
-    } else {
-       const baseTheme = isDark ? 'dark' : 'light';
-       themeClass = `${baseTheme} theme-${newTheme}`;
-    }
     setTheme(newTheme)
   }
+
+  const colorThemes = ["blue", "green", "orange", "red"];
 
   return (
     <DropdownMenu>

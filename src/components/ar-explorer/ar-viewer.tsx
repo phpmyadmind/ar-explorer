@@ -25,6 +25,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     if (!canvas) return;
 
     const scene = new THREE.Scene();
+    scene.background = null; // Transparent background
     sceneRef.current = scene;
     const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
     camera.position.z = 2;
@@ -53,17 +54,33 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
 
     const handleResize = () => {
       if (canvasRef.current) {
-        camera.aspect = canvasRef.current.clientWidth / canvasRef.current.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
+        const parent = canvasRef.current.parentElement;
+        if (parent) {
+          camera.aspect = parent.clientWidth / parent.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(parent.clientWidth, parent.clientHeight);
+        }
       }
     };
 
     window.addEventListener('resize', handleResize);
+    // Use a ResizeObserver to handle parent element resizing
+    const parentElement = canvasRef.current?.parentElement;
+    const resizeObserver = new ResizeObserver(() => {
+        handleResize();
+    });
+
+    if (parentElement) {
+      resizeObserver.observe(parentElement);
+    }
+    
     handleResize();
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (parentElement) {
+        resizeObserver.unobserve(parentElement);
+      }
       cancelAnimationFrame(animationFrameId);
       renderer.dispose();
     };
@@ -74,7 +91,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     if (!scene) return;
 
     // Clear previous model
-    const toRemove = scene.children.filter(child => child.type === "Group");
+    const toRemove = scene.children.filter(child => child.name === "loaded_model");
     toRemove.forEach(child => scene.remove(child));
     
     // Hide and reset canvas and video element
@@ -106,6 +123,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
           model.path,
           (gltf) => {
             const loadedModel = gltf.scene;
+            loadedModel.name = "loaded_model";
             loadedModel.scale.set(model.scale, model.scale, model.scale);
             
             const box = new THREE.Box3().setFromObject(loadedModel);
@@ -127,9 +145,9 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
   }, [model]);
 
   return (
-    <div className="absolute inset-0 w-full h-full pointer-events-none">
-      <canvas ref={canvasRef} className="w-full h-full pointer-events-auto" style={{display: 'none'}}/>
-      <video ref={videoModelRef} loop playsInline muted className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto" style={{display: 'none', width: '90%', height: '90%', objectFit: 'contain'}} />
+    <div className="absolute inset-0 w-full h-full">
+      <canvas ref={canvasRef} className="w-full h-full" style={{display: 'none'}}/>
+      <video ref={videoModelRef} loop playsInline muted className="w-full h-full" style={{display: 'none', objectFit: 'contain'}} />
       
       {(loading || error || !model) && (
          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300">

@@ -8,6 +8,7 @@ import { ModelSelector } from '@/components/ar-explorer/model-selector';
 import { type Model, staticModels } from '@/lib/models';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -106,15 +107,20 @@ function HomePageContent() {
   return (
     <div className="flex h-svh w-full flex-col bg-background text-foreground">
       <Header />
-      <main className="flex flex-1 flex-col overflow-hidden">
-        {/* Top part: Camera and AR view */}
-        <div className="relative h-[60%] md:h-[70%]">
-          <CameraView />
-          <ARViewer model={selectedModel} />
+      <main className="flex flex-1 flex-col overflow-hidden md:flex-row">
+        {/* Left side: Camera + AR Viewer */}
+        <div className="flex flex-1 flex-col h-full md:w-1/2">
+            <div className="relative h-[30%] md:h-1/2">
+                <CameraView />
+            </div>
+            <Separator />
+            <div className="relative flex-1 h-[70%] md:h-1/2 bg-muted/20">
+                <ARViewer model={selectedModel} />
+            </div>
         </div>
 
-        {/* Bottom part: Scrollable model selector */}
-        <div className="flex-1 border-t bg-muted/40">
+        {/* Right side: Scrollable model selector */}
+        <div className="flex-1 border-t md:border-t-0 md:border-l bg-muted/40 h-full md:w-1/2">
            <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} />
         </div>
       </main>
