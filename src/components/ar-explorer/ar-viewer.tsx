@@ -150,10 +150,10 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
   }, [model]);
 
   return (
-    <div className="relative flex-1 w-full overflow-hidden bg-black">
+    <div className="absolute inset-0 w-full h-full bg-black">
       <video ref={videoRef} className="absolute top-0 left-0 w-full h-full object-cover" muted playsInline />
       <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" />
-      <video ref={videoModelRef} loop playsInline muted className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-auto w-auto max-h-[80%] max-w-[90%]" style={{display: 'none'}} />
+      <video ref={videoModelRef} loop playsInline muted className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{display: 'none', width: '90%', height: '90%', objectFit: 'contain'}} />
       
       {(loading || error || cameraError || !model) && (
          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300">

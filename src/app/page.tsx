@@ -26,7 +26,7 @@ function HomePageContent() {
   return (
     <div className="flex h-svh w-full flex-col bg-background text-foreground">
       <Header />
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="relative flex-1 overflow-hidden">
         <ARViewer model={selectedModel} />
         <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} />
       </main>

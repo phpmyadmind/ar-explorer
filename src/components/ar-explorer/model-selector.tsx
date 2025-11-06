@@ -39,7 +39,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
 
   return (
     <>
-      <div className="w-full border-t bg-background/80 p-4 backdrop-blur-sm z-10">
+      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/50 to-transparent p-4 z-10">
         <ScrollArea className="w-full whitespace-nowrap rounded-lg">
           <div className="flex w-max space-x-4">
             {models.map((model) => (
@@ -47,7 +47,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
                 key={model.id}
                 onClick={() => onSelectModel(model)}
                 className={cn(
-                  'group h-40 w-48 shrink-0 cursor-pointer overflow-hidden transition-all hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                  'group h-32 w-40 shrink-0 cursor-pointer overflow-hidden transition-all hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
                   selectedModelId === model.id ? 'ring-2 ring-primary shadow-lg' : 'ring-0'
                 )}
                 tabIndex={0}
@@ -77,7 +77,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
                     </Button>
                   </div>
                   <div className="absolute bottom-0 left-0 p-3">
-                    <h3 className="font-semibold text-primary-foreground">{model.name}</h3>
+                    <h3 className="font-semibold text-primary-foreground text-sm">{model.name}</h3>
                   </div>
                 </CardContent>
               </Card>
