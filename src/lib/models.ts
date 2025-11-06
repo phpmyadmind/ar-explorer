@@ -1,4 +1,4 @@
-import { PlaceHolderImages, type ImagePlaceholder } from './placeholder-images';
+import { PlaceHolderImages } from './placeholder-images';
 
 export interface Model {
   id: string;
@@ -8,12 +8,13 @@ export interface Model {
   scale: number;
   description: string;
   type: '3d' | 'video';
+  url: string;
 }
 
 const getPreview = (id: string): string => {
   const image = PlaceHolderImages.find(p => p.id === id);
   return image ? image.imageUrl : '';
-}
+};
 
 export const models: Model[] = [
   {
@@ -24,6 +25,7 @@ export const models: Model[] = [
     scale: 0.015,
     description: 'A comfortable and stylish armchair to fit any modern living space.',
     type: '3d',
+    url: '/?model=armchair',
   },
   {
     id: 'bonsai',
@@ -33,6 +35,7 @@ export const models: Model[] = [
     scale: 0.4,
     description: 'A beautiful bonsai plant to bring a sense of calm and nature indoors.',
     type: '3d',
+    url: '/?model=bonsai',
   },
   {
     id: 'lamp',
@@ -42,6 +45,7 @@ export const models: Model[] = [
     scale: 0.3,
     description: 'A sleek and functional desk lamp for your workspace.',
     type: '3d',
+    url: '/?model=lamp',
   },
   {
     id: 'isthis',
@@ -51,6 +55,7 @@ export const models: Model[] = [
     scale: 1,
     description: 'Obra de arte en video: ¿Qué me está pasando?',
     type: 'video',
+    url: '/?model=isthis',
   },
   {
     id: 'noaguanto',
@@ -60,5 +65,6 @@ export const models: Model[] = [
     scale: 1,
     description: 'Obra de arte en video: Ya no aguanto más.',
     type: 'video',
+    url: '/?model=noaguanto',
   },
 ];

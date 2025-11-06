@@ -1,13 +1,23 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/ar-explorer/header';
 import { ARViewer } from '@/components/ar-explorer/ar-viewer';
 import { ModelSelector } from '@/components/ar-explorer/model-selector';
 import { models, type Model } from '@/lib/models';
 import { Toaster } from '@/components/ui/toaster';
 
-export default function Home() {
+function HomePageContent() {
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const searchParams = useSearchParams();
+  const modelIdFromUrl = searchParams.get('model');
+
+  useEffect(() => {
+    if (modelIdFromUrl) {
+      const model = models.find(m => m.id === modelIdFromUrl) || null;
+      setSelectedModel(model);
+    }
+  }, [modelIdFromUrl]);
 
   const handleSelectModel = (model: Model) => {
     setSelectedModel(model);
@@ -22,5 +32,11 @@ export default function Home() {
       </main>
       <Toaster />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <HomePageContent />
   );
 }
