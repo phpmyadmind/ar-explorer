@@ -20,6 +20,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState(false);
+  const videoModelRef = useRef<HTMLVideoElement>(null);
 
   const setupCamera = async () => {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -104,12 +105,26 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     // Clear previous model
     const toRemove = scene.children.filter(child => child.type === "Group");
     toRemove.forEach(child => scene.remove(child));
+    if (videoModelRef.current) {
+      videoModelRef.current.src = '';
+      videoModelRef.current.style.display = 'none';
+    }
 
     if (!model) return;
     
     setLoading(true);
     setError(null);
     
+    if (model.type === 'video') {
+      if (videoModelRef.current) {
+        videoModelRef.current.src = model.path;
+        videoModelRef.current.style.display = 'block';
+        videoModelRef.current.play();
+      }
+      setLoading(false);
+      return;
+    }
+
     const loader = new GLTFLoader();
     loader.load(
       model.path,
@@ -138,6 +153,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     <div className="relative flex-1 w-full overflow-hidden bg-black">
       <video ref={videoRef} className="absolute top-0 left-0 w-full h-full object-cover" muted playsInline />
       <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" />
+      <video ref={videoModelRef} loop playsInline muted className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-auto w-auto max-h-[80%] max-w-[90%]" style={{display: 'none'}} />
       
       {(loading || error || cameraError || !model) && (
          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300">
@@ -157,7 +173,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
                   </AlertDescription>
                 </Alert>
               )}
-              {cameraError && !error.includes('camera') && (
+              {cameraError && !error?.includes('camera') && (
                 <Alert variant="destructive">
                   <VideoOff className="h-4 w-4" />
                   <AlertTitle>Camera Not Available</AlertTitle>

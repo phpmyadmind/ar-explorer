@@ -7,6 +7,7 @@ export interface Model {
   previewImage: string;
   scale: number;
   description: string;
+  type: '3d' | 'video';
 }
 
 const armchairPreview = PlaceHolderImages.find(p => p.id === 'armchair-preview')?.imageUrl ?? '';
@@ -22,7 +23,8 @@ export const models: Model[] = [
     path: '/models/armchair.glb',
     previewImage: armchairPreview,
     scale: 0.015,
-    description: 'A comfortable and stylish armchair to fit any modern living space.'
+    description: 'A comfortable and stylish armchair to fit any modern living space.',
+    type: '3d',
   },
   {
     id: 'bonsai',
@@ -30,7 +32,8 @@ export const models: Model[] = [
     path: '/models/bonsai.glb',
     previewImage: bonsaiPreview,
     scale: 0.4,
-    description: 'A beautiful bonsai plant to bring a sense of calm and nature indoors.'
+    description: 'A beautiful bonsai plant to bring a sense of calm and nature indoors.',
+    type: '3d',
   },
   {
     id: 'lamp',
@@ -38,22 +41,25 @@ export const models: Model[] = [
     path: '/models/lamp.glb',
     previewImage: lampPreview,
     scale: 0.3,
-    description: 'A sleek and functional desk lamp for your workspace.'
+    description: 'A sleek and functional desk lamp for your workspace.',
+    type: '3d',
   },
   {
     id: 'isthis',
-    name: 'Desk Lamp',
+    name: 'Qué me está pasando',
     path: '/models/Cuadro No 01 EOT-que me esta pasando.mp4',
     previewImage: whatIsThis,
-    scale: 0.3,
-    description: 'A sleek and functional desk lamp for your workspace.'
+    scale: 1,
+    description: 'Obra de arte en video: ¿Qué me está pasando?',
+    type: 'video',
   },
   {
     id: 'noaguanto',
-    name: 'Desk Lamp',
+    name: 'Ya no aguanto más',
     path: '/models/Cuadro No 04 EOT-ya no aguanto mas.mp4',
     previewImage: noAguanto,
-    scale: 0.3,
-    description: 'A sleek and functional desk lamp for your workspace.'
+    scale: 1,
+    description: 'Obra de arte en video: Ya no aguanto más.',
+    type: 'video',
   },
 ];
