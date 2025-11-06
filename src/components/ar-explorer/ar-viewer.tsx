@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, FC } from 'react';
@@ -144,7 +145,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
   return (
     <div className="absolute inset-0 w-full h-full">
       <canvas ref={canvasRef} className="w-full h-full" style={{display: 'none'}}/>
-      <video ref={videoModelRef} loop playsInline muted className="w-full h-full" style={{display: 'none', objectFit: 'contain', width: '90%', height: '90%', margin: 'auto'}} />
+      <video ref={videoModelRef} loop playsInline muted className="w-full h-full" style={{display: 'none', objectFit: 'cover' }} />
       
       {(loading || error || !model) && (
          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300">
