@@ -64,7 +64,6 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     };
 
     window.addEventListener('resize', handleResize);
-    // Use a ResizeObserver to handle parent element resizing
     const parentElement = canvasRef.current?.parentElement;
     const resizeObserver = new ResizeObserver(() => {
         handleResize();
@@ -90,11 +89,9 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // Clear previous model
     const toRemove = scene.children.filter(child => child.name === "loaded_model");
     toRemove.forEach(child => scene.remove(child));
     
-    // Hide and reset canvas and video element
     if(canvasRef.current) canvasRef.current.style.display = 'none';
     if (videoModelRef.current) {
       videoModelRef.current.src = '';
@@ -147,7 +144,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
   return (
     <div className="absolute inset-0 w-full h-full">
       <canvas ref={canvasRef} className="w-full h-full" style={{display: 'none'}}/>
-      <video ref={videoModelRef} loop playsInline muted className="w-full h-full" style={{display: 'none', objectFit: 'contain'}} />
+      <video ref={videoModelRef} loop playsInline muted className="w-full h-full" style={{display: 'none', objectFit: 'contain', width: '90%', height: '90%', margin: 'auto'}} />
       
       {(loading || error || !model) && (
          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300">

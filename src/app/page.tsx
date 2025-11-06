@@ -8,7 +8,6 @@ import { ModelSelector } from '@/components/ar-explorer/model-selector';
 import { type Model, staticModels } from '@/lib/models';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -58,13 +57,11 @@ function HomePageContent() {
   }, []);
 
   useEffect(() => {
-    // This logic needs to run after models are set, either from API or static fallback
     if (models.length > 0) {
       if (modelIdFromUrl) {
         const model = models.find(m => m.id === modelIdFromUrl) || null;
         setSelectedModel(model);
       } else {
-        // If no model is in the URL, select the first one by default
         setSelectedModel(models[0]);
       }
     }
@@ -72,7 +69,6 @@ function HomePageContent() {
 
   const handleSelectModel = (model: Model) => {
     setSelectedModel(model);
-    // Update URL without reloading page
     window.history.pushState({}, '', `/?model=${model.id}`);
   };
   
@@ -87,7 +83,6 @@ function HomePageContent() {
     );
   }
 
-  // Error is now reserved for critical unhandled errors, not for backend connection.
   if (error) {
     return (
        <div className="flex h-svh w-full flex-col bg-background text-foreground">
@@ -107,20 +102,15 @@ function HomePageContent() {
   return (
     <div className="flex h-svh w-full flex-col bg-background text-foreground">
       <Header />
-      <main className="flex flex-1 flex-col overflow-hidden md:flex-row">
-        {/* Left side: Camera + AR Viewer */}
-        <div className="flex flex-1 flex-col h-full md:w-1/2">
-            <div className="relative h-[30%] md:h-1/2">
-                <CameraView />
-            </div>
-            <Separator />
-            <div className="relative flex-1 h-[70%] md:h-1/2 bg-muted/20">
-                <ARViewer model={selectedModel} />
-            </div>
+      <main className="flex flex-1 flex-col overflow-hidden">
+        {/* Top part: Camera and AR view (takes most of the space) */}
+        <div className="relative flex-1">
+          <CameraView />
+          <ARViewer model={selectedModel} />
         </div>
 
-        {/* Right side: Scrollable model selector */}
-        <div className="flex-1 border-t md:border-t-0 md:border-l bg-muted/40 h-full md:w-1/2">
+        {/* Bottom part: Scrollable model selector */}
+        <div className="h-[30%] md:h-[40%] border-t bg-muted/40">
            <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} />
         </div>
       </main>
@@ -130,7 +120,6 @@ function HomePageContent() {
 
 export default function Home() {
   return (
-    // Suspense is required for useSearchParams
     <Suspense fallback={<div className="flex h-svh w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
       <HomePageContent />
     </Suspense>
