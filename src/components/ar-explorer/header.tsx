@@ -10,7 +10,7 @@ export const Header: FC = () => {
       <Link href="/" className="flex items-center gap-2">
         <Box className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-bold tracking-tight text-foreground">
-          AR Platform
+          AR Experience PCN Beyond Formats
         </h1>
       </Link>
       <div className='flex items-center gap-2'>
