@@ -21,13 +21,13 @@
     {
       "id": "que-me-esta-pasando-preview",
       "description": "Preview of video art piece 'Qué me está pasando'",
-      "imageUrl": "/models/Cuadro No 01 EOT-que me esta pasando.jpg",
+      "imageUrl": "/models/que-me-esta-pasando.jpg",
       "imageHint": "art video"
     },
     {
       "id": "no-aguanto-mas-preview",
       "description": "Preview of video art piece 'Ya no aguanto más'",
-      "imageUrl": "/models/Cuadro No 04 EOT-ya no aguanto mas.png",
+      "imageUrl": "/models/ya-no-aguanto-mas.png",
       "imageHint": "art video"
     }
   ]

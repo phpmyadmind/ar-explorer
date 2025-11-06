@@ -1,4 +1,4 @@
-import { PlaceHolderImages } from './placeholder-images';
+import { PlaceHolderImages, type ImagePlaceholder } from './placeholder-images';
 
 export interface Model {
   id: string;
@@ -10,18 +10,17 @@ export interface Model {
   type: '3d' | 'video';
 }
 
-const armchairPreview = PlaceHolderImages.find(p => p.id === 'armchair-preview')?.imageUrl ?? '';
-const bonsaiPreview = PlaceHolderImages.find(p => p.id === 'bonsai-preview')?.imageUrl ?? '';
-const lampPreview = PlaceHolderImages.find(p => p.id === 'lamp-preview')?.imageUrl ?? '';
-const whatIsThis = PlaceHolderImages.find(p => p.id === 'que-me-esta-pasando-preview')?.imageUrl ?? '';
-const noAguanto = PlaceHolderImages.find(p => p.id === 'no-aguanto-mas-preview')?.imageUrl ?? '';
+const getPreview = (id: string): string => {
+  const image = PlaceHolderImages.find(p => p.id === id);
+  return image ? image.imageUrl : '';
+}
 
 export const models: Model[] = [
   {
     id: 'armchair',
     name: 'Modern Armchair',
     path: '/models/armchair.glb',
-    previewImage: armchairPreview,
+    previewImage: getPreview('armchair-preview'),
     scale: 0.015,
     description: 'A comfortable and stylish armchair to fit any modern living space.',
     type: '3d',
@@ -30,7 +29,7 @@ export const models: Model[] = [
     id: 'bonsai',
     name: 'Bonsai Plant',
     path: '/models/bonsai.glb',
-    previewImage: bonsaiPreview,
+    previewImage: getPreview('bonsai-preview'),
     scale: 0.4,
     description: 'A beautiful bonsai plant to bring a sense of calm and nature indoors.',
     type: '3d',
@@ -39,7 +38,7 @@ export const models: Model[] = [
     id: 'lamp',
     name: 'Desk Lamp',
     path: '/models/lamp.glb',
-    previewImage: lampPreview,
+    previewImage: getPreview('lamp-preview'),
     scale: 0.3,
     description: 'A sleek and functional desk lamp for your workspace.',
     type: '3d',
@@ -47,8 +46,8 @@ export const models: Model[] = [
   {
     id: 'isthis',
     name: 'Qué me está pasando',
-    path: '/models/Cuadro No 01 EOT-que me esta pasando.mp4',
-    previewImage: whatIsThis,
+    path: '/models/que-me-esta-pasando.mp4',
+    previewImage: getPreview('que-me-esta-pasando-preview'),
     scale: 1,
     description: 'Obra de arte en video: ¿Qué me está pasando?',
     type: 'video',
@@ -56,8 +55,8 @@ export const models: Model[] = [
   {
     id: 'noaguanto',
     name: 'Ya no aguanto más',
-    path: '/models/Cuadro No 04 EOT-ya no aguanto mas.mp4',
-    previewImage: noAguanto,
+    path: '/models/ya-no-aguanto-mas.mp4',
+    previewImage: getPreview('no-aguanto-mas-preview'),
     scale: 1,
     description: 'Obra de arte en video: Ya no aguanto más.',
     type: 'video',
