@@ -24,7 +24,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
 
   useEffect(() => {
     if (qrModel && typeof window !== 'undefined') {
-      const url = `${window.location.origin}?model=${qrModel.id}`;
+      const url = `${window.location.origin}/?model=${qrModel.id}`;
       QRCode.toDataURL(url, { width: 300, margin: 2 })
         .then(setQrCodeUrl)
         .catch(console.error);
@@ -36,6 +36,16 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
     setQrModel(model);
     setIsQrDialogOpen(true);
   };
+
+  if (models.length === 0) {
+    return (
+       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/50 to-transparent p-4 z-10">
+         <div className="text-center text-white p-4 bg-black/30 rounded-lg">
+            No models available. Please add some in the admin panel.
+         </div>
+       </div>
+    )
+  }
 
   return (
     <>
@@ -62,6 +72,7 @@ export const ModelSelector: FC<ModelSelectorProps> = ({ models, selectedModelId,
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         data-ai-hint="product photo"
                         sizes="200px"
+                        unoptimized // Required for external URLs without specific hostnames in next.config.js
                       />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
