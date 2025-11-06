@@ -47,8 +47,38 @@ export const staticModels: Model[] = [
     path: 'http://localhost:5000/uploads/tercer-video.mp4',
     previewImage: findImage('tercer-video-preview'),
     scale: 1,
-description: "Videoarte EOT",
+    description: "Videoarte EOT",
     type: 'video',
     url: '/?model=tercer-video'
+  },
+  {
+    id: 'armchair',
+    name: 'Armchair',
+    path: '/models/armchair.glb',
+    previewImage: findImage('armchair-preview'),
+    scale: 0.015,
+    description: "A comfy-looking armchair.",
+    type: '3d-model',
+    url: '/?model=armchair'
+  },
+  {
+    id: 'bonsai',
+    name: 'Bonsai',
+    path: '/models/bonsai.glb',
+    previewImage: findImage('bonsai-preview'),
+    scale: 0.01,
+    description: "A detailed bonsai tree model.",
+    type: '3d-model',
+    url: '/?model=bonsai'
+  },
+  {
+    id: 'lamp',
+    name: 'Desk Lamp',
+    path: '/models/lamp.glb',
+    previewImage: findImage('lamp-preview'),
+    scale: 0.02,
+    description: "A modern desk lamp.",
+    type: '3d-model',
+    url: '/?model=lamp'
   }
 ];
