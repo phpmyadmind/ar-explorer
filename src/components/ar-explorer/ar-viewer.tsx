@@ -90,9 +90,11 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     const scene = sceneRef.current;
     if (!scene) return;
 
+    // Clear previous models
     const toRemove = scene.children.filter(child => child.name === "loaded_model");
     toRemove.forEach(child => scene.remove(child));
     
+    // Hide both views initially
     if(canvasRef.current) canvasRef.current.style.display = 'none';
     if (videoModelRef.current) {
       videoModelRef.current.src = '';
@@ -124,6 +126,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
             loadedModel.name = "loaded_model";
             loadedModel.scale.set(model.scale, model.scale, model.scale);
             
+            // Center the model
             const box = new THREE.Box3().setFromObject(loadedModel);
             const center = box.getCenter(new THREE.Vector3());
             loadedModel.position.sub(center);
@@ -131,7 +134,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
             scene.add(loadedModel);
             setLoading(false);
           },
-          undefined,
+          undefined, // onProgress callback (optional)
           (err) => {
             console.error('Error loading model:', err);
             setError(`Failed to load model: ${model.name}.`);
@@ -144,9 +147,13 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
 
   return (
     <div className="absolute inset-0 w-full h-full">
+      {/* 3D model canvas */}
       <canvas ref={canvasRef} className="w-full h-full" style={{display: 'none'}}/>
-      <video ref={videoModelRef} loop playsInline muted className="w-full h-full" style={{display: 'none', objectFit: 'cover' }} />
+
+      {/* Video/Image view */}
+      <video ref={videoModelRef} loop playsInline muted className="w-full h-full object-cover" style={{display: 'none'}} />
       
+      {/* Overlays for loading/error/welcome states */}
       {(loading || error || !model) && (
          <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300">
             <div className="max-w-md w-full p-4">

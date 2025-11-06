@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/ar-explorer/header';
 import { ARViewer } from '@/components/ar-explorer/ar-viewer';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 
 const API_URL = 'http://localhost:5000/api';
 
-function HomePageContent() {
+export default function HomePage() {
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,13 +115,5 @@ function HomePageContent() {
         </div>
       </main>
     </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <Suspense fallback={<div className="flex h-svh w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
-      <HomePageContent />
-    </Suspense>
   );
 }
