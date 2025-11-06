@@ -7,7 +7,7 @@ export const Header: FC = () => {
       <div className="flex items-center gap-2">
         <Box className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-bold tracking-tight text-foreground">
-          AR Experience PCN Beyond Formats
+          AR Experience
         </h1>
       </div>
     </header>
