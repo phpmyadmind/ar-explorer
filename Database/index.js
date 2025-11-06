@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
-const { pool, initializeDatabase } = require('./database/config');
+const { pool, initializeDatabase } = require('./config/config');
 
 const app = express();
 const PORT = 5000;
