@@ -19,12 +19,24 @@ interface ARViewerProps {
 export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
   const [error, setError] = useState<string | null>(null);
 
+  const is3DModel = model && model.type === '3d-model';
+  
   return (
     <div className="absolute inset-0 w-full h-full">
-        {model && (
+        {is3DModel && (
             <Suspense fallback={<div className="absolute inset-0 flex items-center justify-center bg-transparent"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
                 <ModelViewer model={model} />
             </Suspense>
+        )}
+
+        {model && !is3DModel && (
+          <div className="w-full h-full flex items-center justify-center p-8">
+            {model.type === 'video' ? (
+              <video src={model.path} className="max-w-full max-h-full rounded-lg shadow-2xl" controls autoPlay loop muted />
+            ) : (
+               <img src={model.path} alt={model.name} className="max-w-full max-h-full rounded-lg shadow-2xl object-contain" />
+            )}
+          </div>
         )}
       
       {/* Overlays for error/welcome states */}
