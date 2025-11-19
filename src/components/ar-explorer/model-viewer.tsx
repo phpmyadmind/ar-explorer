@@ -4,7 +4,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DeviceOrientationControls } from 'three/examples/jsm/controls/DeviceOrientationControls.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Model } from '@/lib/models';
 
 interface ModelViewerProps {
@@ -33,7 +33,12 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({ model }) => {
     currentMount.appendChild(renderer.domElement);
 
     // Controls
-    const controls = new DeviceOrientationControls(camera);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 1;
+    controls.maxDistance = 50;
 
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
@@ -44,18 +49,20 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({ model }) => {
 
     // Load Model
     const loader = new GLTFLoader();
+    let modelScene: THREE.Group;
     loader.load(
       model.path,
       (gltf) => {
+        modelScene = gltf.scene;
         // Center and scale model
-        const box = new THREE.Box3().setFromObject(gltf.scene);
+        const box = new THREE.Box3().setFromObject(modelScene);
         const center = box.getCenter(new THREE.Vector3());
-        gltf.scene.position.sub(center); // center the model
+        modelScene.position.sub(center); // center the model
         
         const scale = model.scale || 1;
-        gltf.scene.scale.set(scale, scale, scale);
+        modelScene.scale.set(scale, scale, scale);
 
-        scene.add(gltf.scene);
+        scene.add(modelScene);
       },
       undefined,
       (error) => {
@@ -66,7 +73,7 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({ model }) => {
     // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
-      controls.update();
+      controls.update(); // only required if controls.enableDamping or controls.autoRotate are set to true
       renderer.render(scene, camera);
     };
     animate();
@@ -88,6 +95,7 @@ export const ModelViewer: React.FC<ModelViewerProps> = ({ model }) => {
         currentMount.removeChild(renderer.domElement);
       }
       renderer.dispose();
+      controls.dispose();
     };
   }, [model]);
 
