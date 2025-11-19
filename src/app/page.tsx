@@ -104,13 +104,13 @@ export default function HomePage() {
       <Header />
       <main className="flex flex-1 flex-col overflow-hidden">
         {/* Top part: Camera and AR view (takes most of the space) */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 mt-[15vh]">
           <CameraView />
           <ARViewer model={selectedModel} />
         </div>
 
         {/* Bottom part: Scrollable model selector */}
-        <div className="h-[30%] md:h-[40%] border-t bg-muted/40">
+        <div className="absolute bottom-0 left-0 right-0 h-[30%] md:h-[40%] border-t bg-muted/40 backdrop-blur-sm">
            <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} />
         </div>
       </main>

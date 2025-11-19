@@ -4,11 +4,10 @@
 import { useState, useRef, useEffect, FC } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Loader2, Box, RefreshCw } from 'lucide-react';
+import { Loader2, Box } from 'lucide-react';
 import type { Model } from '@/lib/models';
+import { DeviceOrientationControls } from 'three/examples/jsm/controls/DeviceOrientationControls.js';
 
 interface ARViewerProps {
   model: Model | null;
@@ -29,16 +28,16 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     scene.background = null; // Transparent background
     sceneRef.current = scene;
     const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-    camera.position.z = 2;
+    camera.position.z = 5; // Move camera back a bit for device orientation
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-
+    // Use DeviceOrientationControls for a more immersive AR feel
+    const controls = new DeviceOrientationControls(camera);
+    
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -48,7 +47,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      controls.update();
+      controls.update(); // Update controls on each frame
       renderer.render(scene, camera);
     };
     animate();
@@ -82,6 +81,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
         resizeObserver.unobserve(parentElement);
       }
       cancelAnimationFrame(animationFrameId);
+      controls.dispose();
       renderer.dispose();
     };
   }, []);
