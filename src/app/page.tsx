@@ -1,14 +1,18 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/ar-explorer/header';
 import { CameraView } from '@/components/ar-explorer/camera-view';
-import { ModelSelector } from '@/components/ar-explorer/model-selector';
 import { type Model, staticModels } from '@/lib/models';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ARViewer } from '@/components/ar-explorer/ar-viewer';
+import { ModelSelector } from '@/components/ar-explorer/model-selector';
+
+const ARViewer = dynamic(() => import('@/components/ar-explorer/ar-viewer').then(mod => mod.ARViewer), {
+  ssr: false,
+  loading: () => <div className="absolute inset-0 flex items-center justify-center bg-transparent"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+});
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -101,14 +105,14 @@ export default function HomePage() {
     <div className="flex h-svh w-full flex-col bg-background text-foreground">
       <Header />
       <main className="flex flex-1 flex-col overflow-hidden">
-        {/* Top part: Camera and AR view (takes most of the space) */}
-        <div className="relative flex-1 mt-[15vh]">
+        {/* Top part: Camera and AR view (takes 70% of the space) */}
+        <div className="relative h-[70vh] mt-[10vh]">
           <CameraView />
           <ARViewer model={selectedModel} />
         </div>
 
         {/* Bottom part: Scrollable model selector */}
-        <div className="absolute bottom-0 left-0 right-0 h-[30%] md:h-[40%] border-t bg-muted/40 backdrop-blur-sm">
+        <div className="h-[30vh] border-t bg-muted/40 backdrop-blur-sm">
            <ModelSelector models={models} selectedModelId={selectedModel?.id ?? null} onSelectModel={handleSelectModel} />
         </div>
       </main>

@@ -58,7 +58,7 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
       )}
 
       {/* Video/Image view */}
-      <video ref={videoModelRef} loop playsInline muted className="w-full h-full object-cover" style={{display: 'none'}} />
+      <video ref={videoModelRef} loop playsInline muted className="w-full h-full object-contain" style={{display: 'none'}} />
       
       {/* Overlays for loading/error/welcome states */}
       {(loading || error || !model) && (
