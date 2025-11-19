@@ -1,13 +1,20 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/ar-explorer/header';
-import { ARViewer } from '@/components/ar-explorer/ar-viewer';
 import { CameraView } from '@/components/ar-explorer/camera-view';
 import { ModelSelector } from '@/components/ar-explorer/model-selector';
 import { type Model, staticModels } from '@/lib/models';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+// Dynamically import the ARViewer component with SSR disabled
+const ARViewer = dynamic(() => import('@/components/ar-explorer/ar-viewer').then(mod => mod.ARViewer), {
+  ssr: false,
+  loading: () => <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+});
+
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -16,7 +23,6 @@ export default function HomePage() {
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
   
   const searchParams = useSearchParams();
   const modelIdFromUrl = searchParams.get('model');
@@ -41,12 +47,10 @@ export default function HomePage() {
         url: `/?model=${item.uuid}`,
       }));
       setModels(formattedModels);
-      setIsOnline(true);
 
     } catch (err) {
       console.warn('Failed to fetch from backend, falling back to static models.');
       setModels(staticModels);
-      setIsOnline(false);
     } finally {
       setLoading(false);
     }
