@@ -1,9 +1,9 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, FC } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import React, { useState, useRef, useEffect, FC, Suspense } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Gltf, OrbitControls, Environment } from '@react-three/drei';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Box } from 'lucide-react';
 import type { Model } from '@/lib/models';
@@ -14,23 +14,12 @@ interface ARViewerProps {
 }
 
 const ModelViewer = ({ model }: { model: Model }) => {
-  const [gltf, setGltf] = useState<THREE.Group | null>(null);
-  const modelRef = useRef<THREE.Group>(null!);
-
-  useEffect(() => {
-    if (model.path) {
-      new GLTFLoader().load(model.path, (loadedGltf) => {
-        const scene = loadedGltf.scene;
-        const box = new THREE.Box3().setFromObject(scene);
-        const center = box.getCenter(new THREE.Vector3());
-        scene.position.sub(center);
-        scene.scale.set(model.scale, model.scale, model.scale);
-        setGltf(scene);
-      });
-    }
-  }, [model]);
-
-  return gltf ? <primitive ref={modelRef} object={gltf} /> : null;
+  return (
+    <Suspense fallback={<Loader2 className="h-12 w-12 animate-spin text-primary" />}>
+      <Gltf src={model.path} scale={model.scale} position={[0, 0, 0]} />
+      <Environment preset="sunset" />
+    </Suspense>
+  );
 };
 
 
@@ -44,7 +33,6 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
     setLoading(true);
     setError(null);
     
-    // Hide both views initially
     if(videoModelRef.current) videoModelRef.current.style.display = 'none';
 
     if (!model) {
@@ -53,20 +41,21 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
       return;
     }
 
-    if (model.type === 'video' || model.type === 'image') {
-      setIs3DModel(false);
+    const is3D = model.type === '3d-model';
+    setIs3DModel(is3D);
+
+    if (is3D) {
+      // For 3D models, loading is handled by Suspense in ModelViewer
+      setLoading(false);
+    } else {
+      // For video/image
       if (videoModelRef.current) {
         videoModelRef.current.style.display = 'block';
         videoModelRef.current.src = model.path;
         videoModelRef.current.play().catch(e => console.error("Video play failed", e));
       }
       setLoading(false);
-    } else if (model.type === '3d-model') {
-      setIs3DModel(true);
-       const timer = setTimeout(() => setLoading(false), 500);
-       return () => clearTimeout(timer);
     }
-
   }, [model]);
 
   return (
@@ -75,9 +64,8 @@ export const ARViewer: FC<ARViewerProps> = ({ model }) => {
             <Canvas style={{ background: 'transparent' }}>
                 <ambientLight intensity={1.5} />
                 <directionalLight position={[5, 10, 7.5]} intensity={2.5} />
-                <React.Suspense fallback={null}>
-                    <ModelViewer model={model} />
-                </React.Suspense>
+                <ModelViewer model={model} />
+                <OrbitControls />
             </Canvas>
         )}
 
