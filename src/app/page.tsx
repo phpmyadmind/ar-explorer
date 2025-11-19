@@ -8,11 +8,7 @@ import { type Model, staticModels } from '@/lib/models';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModelSelector } from '@/components/ar-explorer/model-selector';
-
-const ARViewer = dynamic(() => import('@/components/ar-explorer/ar-viewer').then(mod => mod.ARViewer), {
-  ssr: false,
-  loading: () => <div className="absolute inset-0 flex items-center justify-center bg-transparent"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
-});
+import { ARViewer } from '@/components/ar-explorer/ar-viewer';
 
 const API_URL = 'http://localhost:5000/api';
 
