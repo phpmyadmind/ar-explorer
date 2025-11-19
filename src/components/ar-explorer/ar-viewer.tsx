@@ -1,154 +1,85 @@
 
 'use client';
 
-import { useState, useRef, useEffect, FC } from 'react';
-import * as THREE from 'three';
+import React, { useState, useRef, useEffect, FC } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Box } from 'lucide-react';
 import type { Model } from '@/lib/models';
-import { DeviceOrientationControls } from 'three/examples/jsm/controls/DeviceOrientationControls.js';
+import * as THREE from 'three';
 
 interface ARViewerProps {
   model: Model | null;
 }
 
+const ModelViewer = ({ model }: { model: Model }) => {
+  const [gltf, setGltf] = useState<THREE.Group | null>(null);
+  const modelRef = useRef<THREE.Group>(null!);
+
+  useEffect(() => {
+    if (model.path) {
+      new GLTFLoader().load(model.path, (loadedGltf) => {
+        const scene = loadedGltf.scene;
+        const box = new THREE.Box3().setFromObject(scene);
+        const center = box.getCenter(new THREE.Vector3());
+        scene.position.sub(center);
+        scene.scale.set(model.scale, model.scale, model.scale);
+        setGltf(scene);
+      });
+    }
+  }, [model]);
+
+  return gltf ? <primitive ref={modelRef} object={gltf} /> : null;
+};
+
+
 export const ARViewer: FC<ARViewerProps> = ({ model }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const videoModelRef = useRef<HTMLVideoElement>(null);
- 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const scene = new THREE.Scene();
-    scene.background = null; // Transparent background
-    sceneRef.current = scene;
-    const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-    camera.position.z = 5; // Move camera back a bit for device orientation
-
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-    // Use DeviceOrientationControls for a more immersive AR feel
-    const controls = new DeviceOrientationControls(camera);
-    
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
-    directionalLight.position.set(5, 10, 7.5);
-    scene.add(directionalLight);
-
-    let animationFrameId: number;
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      controls.update(); // Update controls on each frame
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    const handleResize = () => {
-      if (canvasRef.current) {
-        const parent = canvasRef.current.parentElement;
-        if (parent) {
-          camera.aspect = parent.clientWidth / parent.clientHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(parent.clientWidth, parent.clientHeight);
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    const parentElement = canvasRef.current?.parentElement;
-    const resizeObserver = new ResizeObserver(() => {
-        handleResize();
-    });
-
-    if (parentElement) {
-      resizeObserver.observe(parentElement);
-    }
-    
-    handleResize();
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (parentElement) {
-        resizeObserver.unobserve(parentElement);
-      }
-      cancelAnimationFrame(animationFrameId);
-      controls.dispose();
-      renderer.dispose();
-    };
-  }, []);
+  const [is3DModel, setIs3DModel] = useState(false);
 
   useEffect(() => {
-    const scene = sceneRef.current;
-    if (!scene) return;
-
-    // Clear previous models
-    const toRemove = scene.children.filter(child => child.name === "loaded_model");
-    toRemove.forEach(child => scene.remove(child));
-    
-    // Hide both views initially
-    if(canvasRef.current) canvasRef.current.style.display = 'none';
-    if (videoModelRef.current) {
-      videoModelRef.current.src = '';
-      videoModelRef.current.style.display = 'none';
-    }
-
-    if (!model) return;
-    
     setLoading(true);
     setError(null);
     
-    if (model.type === 'video' || model.type === 'image') {
-       if (videoModelRef.current) {
-        videoModelRef.current.style.display = 'block';
-        videoModelRef.current.src = model.path;
-        videoModelRef.current.play();
-      }
+    // Hide both views initially
+    if(videoModelRef.current) videoModelRef.current.style.display = 'none';
+
+    if (!model) {
       setLoading(false);
+      setIs3DModel(false);
       return;
     }
-    
-    if (model.type === '3d-model') {
-        if(canvasRef.current) canvasRef.current.style.display = 'block';
-        const loader = new GLTFLoader();
-        loader.load(
-          model.path,
-          (gltf) => {
-            const loadedModel = gltf.scene;
-            loadedModel.name = "loaded_model";
-            loadedModel.scale.set(model.scale, model.scale, model.scale);
-            
-            // Center the model
-            const box = new THREE.Box3().setFromObject(loadedModel);
-            const center = box.getCenter(new THREE.Vector3());
-            loadedModel.position.sub(center);
-            
-            scene.add(loadedModel);
-            setLoading(false);
-          },
-          undefined, // onProgress callback (optional)
-          (err) => {
-            console.error('Error loading model:', err);
-            setError(`Failed to load model: ${model.name}.`);
-            setLoading(false);
-          }
-        );
+
+    if (model.type === 'video' || model.type === 'image') {
+      setIs3DModel(false);
+      if (videoModelRef.current) {
+        videoModelRef.current.style.display = 'block';
+        videoModelRef.current.src = model.path;
+        videoModelRef.current.play().catch(e => console.error("Video play failed", e));
+      }
+      setLoading(false);
+    } else if (model.type === '3d-model') {
+      setIs3DModel(true);
+       const timer = setTimeout(() => setLoading(false), 500);
+       return () => clearTimeout(timer);
     }
 
   }, [model]);
 
   return (
     <div className="absolute inset-0 w-full h-full">
-      {/* 3D model canvas */}
-      <canvas ref={canvasRef} className="w-full h-full" style={{display: 'none'}}/>
+        {is3DModel && model && (
+            <Canvas style={{ background: 'transparent' }}>
+                <ambientLight intensity={1.5} />
+                <directionalLight position={[5, 10, 7.5]} intensity={2.5} />
+                <React.Suspense fallback={null}>
+                    <ModelViewer model={model} />
+                </React.Suspense>
+            </Canvas>
+        )}
 
       {/* Video/Image view */}
       <video ref={videoModelRef} loop playsInline muted className="w-full h-full object-cover" style={{display: 'none'}} />
