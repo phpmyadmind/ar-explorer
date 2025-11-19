@@ -3,7 +3,7 @@
 
 import React, { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Gltf, OrbitControls, Environment } from '@react-three/drei';
+import { Gltf, DeviceOrientationControls, Environment } from '@react-three/drei';
 import { Loader2 } from 'lucide-react';
 import type { Model } from '@/lib/models';
 
@@ -20,7 +20,7 @@ export const ModelViewer = ({ model }: ModelViewerProps) => {
         <Gltf src={model.path} scale={model.scale} position={[0, 0, 0]} />
         <Environment preset="sunset" />
       </Suspense>
-      <OrbitControls />
+      <DeviceOrientationControls />
     </Canvas>
   );
 };
