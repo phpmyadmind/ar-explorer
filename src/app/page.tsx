@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/ar-explorer/header';
-import { CameraView } from '@/components/ar-explorer/camera-view';
 import { type Model, staticModels } from '@/lib/models';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,7 @@ import { ModelSelector } from '@/components/ar-explorer/model-selector';
 
 const ARViewer = dynamic(() => import('@/components/ar-explorer/ar-viewer').then(mod => mod.ARViewer), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 flex items-center justify-center bg-transparent"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
+  loading: () => <div className="absolute inset-0 flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
 });
 
 
@@ -106,9 +105,8 @@ export default function HomePage() {
     <div className="flex h-svh w-full flex-col bg-background text-foreground">
       <Header />
       <main className="flex flex-1 flex-col overflow-hidden">
-        {/* Top part: Camera and AR view (takes 70% of the space) */}
-        <div className="relative h-[70vh] mt-[10vh]">
-          <CameraView />
+        {/* Top part: Camera and AR view */}
+        <div className="relative h-[70vh] mt-[10vh] bg-black">
           <ARViewer model={selectedModel} />
         </div>
 
