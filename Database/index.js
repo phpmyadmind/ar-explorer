@@ -35,7 +35,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowedTypes = {
       'image': /jpeg|jpg|png|gif|webp|glb/,
-      'video': /mp4|webm|ogg|mov/,
+      'video': /mp4|webm|ogg|mov|avi/,
       '3d-model': /gltf|glb/
     };
     
