@@ -1,4 +1,4 @@
-// src/app/admin/page.tsx
+// src/app/contents/page.tsx
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Header } from '@/components/ar-explorer/header';
-import Link from 'next/link';
+import Image from 'next/image';
 
 // Definir el tipo para los recursos, basado en la API
 interface ARResource {
@@ -24,15 +24,16 @@ interface ARResource {
     last_accessed: string | null;
 }
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:5000';
 
-export default function AdminPage() {
+export default function ContentsPage() {
     const [resources, setResources] = useState<ARResource[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [newResource, setNewResource] = useState({ name: '', type: 'video' as 'video' | 'image' | '3d-model', markerType: 'qrcode' as 'pattern' | 'qrcode' | 'aruco' });
     const [file, setFile] = useState<File | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchResources();
@@ -42,7 +43,7 @@ export default function AdminPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_URL}/resources`);
+            const response = await fetch(`${API_URL}/api/resources`);
             if (!response.ok) throw new Error('Network response was not ok');
             const data = await response.json();
             setResources(data);
@@ -67,6 +68,7 @@ export default function AdminPage() {
             return;
         }
 
+        setIsSubmitting(true);
         const formData = new FormData();
         formData.append('name', newResource.name);
         formData.append('type', newResource.type);
@@ -74,7 +76,7 @@ export default function AdminPage() {
         formData.append('content', file);
 
         try {
-            const response = await fetch(`${API_URL}/resources`, {
+            const response = await fetch(`${API_URL}/api/resources`, {
                 method: 'POST',
                 body: formData,
             });
@@ -91,6 +93,8 @@ export default function AdminPage() {
             setFile(null);
         } catch (err: any) {
             alert(`Error: ${err.message}`);
+        } finally {
+            setIsSubmitting(false);
         }
     };
     
@@ -98,7 +102,7 @@ export default function AdminPage() {
         if (!confirm('Are you sure you want to delete this resource?')) return;
 
         try {
-            const response = await fetch(`${API_URL}/resources/${uuid}`, {
+            const response = await fetch(`${API_URL}/api/resources/${uuid}`, {
                 method: 'DELETE',
             });
             if (!response.ok) {
@@ -119,12 +123,12 @@ export default function AdminPage() {
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle>AR Resource Management</CardTitle>
-                            <CardDescription>View, add, and delete your AR assets.</CardDescription>
+                            <CardDescription>View, add, and manage your AR assets.</CardDescription>
                         </div>
                         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button>
-                                    <PlusCircle className="mr-2" />
+                                    <PlusCircle className="mr-2 h-4 w-4" />
                                     Add Resource
                                 </Button>
                             </DialogTrigger>
@@ -139,7 +143,7 @@ export default function AdminPage() {
                                     <div className="grid gap-4 py-4">
                                         <div className="grid grid-cols-4 items-center gap-4">
                                             <Label htmlFor="name" className="text-right">Name</Label>
-                                            <Input id="name" value={newResource.name} onChange={(e) => setNewResource({...newResource, name: e.target.value})} className="col-span-3" placeholder="e.g., 'Modern Armchair'" />
+                                            <Input id="name" value={newResource.name} onChange={(e) => setNewResource({...newResource, name: e.target.value})} className="col-span-3" placeholder="e.g., 'Corporate Video'" />
                                         </div>
                                         <div className="grid grid-cols-4 items-center gap-4">
                                             <Label htmlFor="type" className="text-right">Type</Label>
@@ -160,7 +164,10 @@ export default function AdminPage() {
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                        <Button type="submit">Create</Button>
+                                        <Button type="submit" disabled={isSubmitting}>
+                                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Create
+                                        </Button>
                                     </DialogFooter>
                                 </form>
                             </DialogContent>
@@ -182,6 +189,7 @@ export default function AdminPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>QR Code</TableHead>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Type</TableHead>
                                         <TableHead className="text-center">Access Count</TableHead>
@@ -191,8 +199,13 @@ export default function AdminPage() {
                                 <TableBody>
                                     {resources.map((resource) => (
                                         <TableRow key={resource.uuid}>
+                                            <TableCell>
+                                                <div className="p-1 border rounded-md w-14 h-14 flex items-center justify-center">
+                                                    <Image src={`${API_URL}${resource.qr_code_url}`} alt={`QR for ${resource.name}`} width={48} height={48} />
+                                                </div>
+                                            </TableCell>
                                             <TableCell className="font-medium">{resource.name}</TableCell>
-                                            <TableCell><span className="capitalize bg-muted px-2 py-1 rounded-full text-xs">{resource.type.replace('-',' ')}</span></TableCell>
+                                            <TableCell><span className="capitalize bg-muted px-2 py-1 rounded-full text-xs font-medium">{resource.type.replace('-',' ')}</span></TableCell>
                                             <TableCell className="text-center">{resource.access_count}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" onClick={() => deleteResource(resource.uuid)}>

@@ -1,36 +1,36 @@
 'use client';
 
 import React, { Suspense, useState, useEffect, useRef } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { Gltf, OrbitControls, DeviceOrientationControls, Plane, useVideoTexture } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, DeviceOrientationControls, Plane, useVideoTexture, Gltf } from '@react-three/drei';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Box, VideoOff } from 'lucide-react';
+import { Loader2, Box, VideoOff, CameraOff } from 'lucide-react';
 import type { Model } from '@/lib/models';
 import * as THREE from 'three';
 
-// Component to handle video texture on a plane
-function VideoScene({ path }: { path: string }) {
-  const texture = useVideoTexture(path);
+// Componente para manejar la textura de video/imagen en un plano
+function MediaScene({ path, type }: { path: string, type: 'video' | 'image' }) {
+  const texture = useVideoTexture(path, { start: type === 'video', muted: type === 'video' });
+  const aspectRatio = 16 / 9; // Asumimos un aspect ratio para el video/imagen
+  
   return (
-    <mesh scale={[1, 1, 1]}>
-      <planeGeometry args={[16, 9]} />
+    <mesh scale={[aspectRatio, 1, 1]}>
+      <planeGeometry args={[1, 1]} />
       <meshBasicMaterial map={texture} toneMapped={false} />
     </mesh>
   );
 }
 
-// Component to handle 3D model loading
+// Componente para manejar la carga de modelos 3D
 function ModelScene({ path, scale }: { path: string, scale: number }) {
   return (
     <Gltf src={path} scale={scale} />
   );
 }
 
-// Background component that uses the device camera
+// Componente de fondo que utiliza la cámara del dispositivo
 function CameraBackground() {
-  const [video, setVideo] = useState<HTMLVideoElement | null>(null);
-  const texture = useVideoTexture(video!);
-  const { size } = useThree();
+  const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null);
 
   useEffect(() => {
     let stream: MediaStream;
@@ -44,7 +44,9 @@ function CameraBackground() {
         stream = s;
         videoElement.srcObject = s;
         videoElement.play();
-        setVideo(videoElement);
+        const texture = new THREE.VideoTexture(videoElement);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        setVideoTexture(texture);
       })
       .catch(err => {
         console.error("Camera access denied:", err);
@@ -55,12 +57,12 @@ function CameraBackground() {
     };
   }, []);
 
-  if (!video) return null;
+  if (!videoTexture) return null;
 
   return (
     <mesh position={[0, 0, -10]}>
-      <planeGeometry args={[size.width / 50, size.height / 50]} />
-      <meshBasicMaterial map={texture} toneMapped={false} />
+      <planeGeometry args={[30, 30]} />
+      <meshBasicMaterial map={videoTexture} />
     </mesh>
   );
 }
@@ -71,7 +73,7 @@ interface ARViewerProps {
 
 export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState(true);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkPermission = async () => {
@@ -87,40 +89,54 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
     };
     checkPermission();
   }, []);
+  
+  if (hasCameraPermission === null) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center bg-black">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+        </div>
+      );
+  }
 
-  return (
-    <div className="absolute inset-0 w-full h-full">
-      {hasCameraPermission ? (
-        <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
-          <ambientLight intensity={1.5} />
-          <directionalLight position={[5, 10, 7.5]} intensity={2.5} />
-          
-          <Suspense fallback={null}>
-            <CameraBackground />
-            {model && model.type === '3d-model' && <ModelScene path={model.path} scale={model.scale} />}
-            {model && model.type === 'video' && <VideoScene path={model.path} />}
-            {model && model.type === 'image' && <ModelScene path={model.path} scale={1} />}
-          </Suspense>
-
-          <OrbitControls />
-          <DeviceOrientationControls />
-        </Canvas>
-      ) : (
+  if (!hasCameraPermission) {
+      return (
         <div className="absolute inset-0 flex items-center justify-center bg-black">
           <Alert variant="destructive" className="max-w-md">
-            <VideoOff className="h-5 w-5" />
+            <CameraOff className="h-5 w-5" />
             <AlertTitle>Camera Access Denied</AlertTitle>
             <AlertDescription>{cameraError}</AlertDescription>
           </Alert>
         </div>
-      )}
+      );
+  }
+  
+  return (
+    <div className="absolute inset-0 w-full h-full">
+        <Canvas camera={{ position: [0, 0, 2], fov: 75 }}>
+          <ambientLight intensity={1.5} />
+          <directionalLight position={[5, 10, 7.5]} intensity={2.5} />
+          
+          <Suspense fallback={
+              <mesh>
+                  <boxGeometry />
+                  <meshStandardMaterial />
+              </mesh>
+          }>
+            <CameraBackground />
+            {model?.type === '3d-model' && <ModelScene path={model.path} scale={model.scale} />}
+            {(model?.type === 'video' || model?.type === 'image') && <MediaScene path={model.path} type={model.type} />}
+          </Suspense>
 
-      {(!model && hasCameraPermission) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm">
-          <div className="text-center p-8 bg-card/80 rounded-lg shadow-2xl max-w-md">
+          <OrbitControls enableZoom={true} enablePan={true} />
+          <DeviceOrientationControls />
+        </Canvas>
+
+      {(!model) && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/70 backdrop-blur-sm z-10">
+          <div className="text-center p-8 bg-card/80 rounded-lg shadow-2xl max-w-md mx-4">
             <Box className="mx-auto h-12 w-12 text-primary"/>
-            <h2 className="mt-4 text-2xl font-bold text-card-foreground">Welcome to AR Platform</h2>
-            <p className="text-muted-foreground mt-2">Select a model from the list below to get started.</p>
+            <h2 className="mt-4 text-2xl font-bold text-card-foreground">Welcome to the AR Platform</h2>
+            <p className="text-muted-foreground mt-2">Select a model from the list below or scan a QR code to get started.</p>
           </div>
         </div>
       )}
