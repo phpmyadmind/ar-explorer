@@ -1,4 +1,4 @@
-import { Box, Settings } from 'lucide-react';
+import { Box, Settings, Grid3x3 } from 'lucide-react';
 import type { FC } from 'react';
 import { ThemeSwitcher } from './theme-switcher';
 import Link from 'next/link';
@@ -14,6 +14,12 @@ export const Header: FC = () => {
         </h1>
       </Link>
       <div className='flex items-center gap-2'>
+        <Link href="/models">
+            <Button variant="outline">
+                <Grid3x3 className='h-5 w-5 mr-2' />
+                Select Model
+            </Button>
+        </Link>
         <Link href="/contents">
             <Button variant="outline" size="icon">
                 <Settings className='h-5 w-5' />

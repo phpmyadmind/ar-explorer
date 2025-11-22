@@ -80,10 +80,37 @@ const createTables = async () => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `;
 
+  const createRoutesTable = `
+    CREATE TABLE IF NOT EXISTS ar_routes (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      uuid VARCHAR(36) UNIQUE NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      qr_code_url VARCHAR(500),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `;
+
+  const createRouteStepsTable = `
+    CREATE TABLE IF NOT EXISTS ar_route_steps (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      route_uuid VARCHAR(36) NOT NULL,
+      resource_uuid VARCHAR(36) NOT NULL,
+      step_order INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (route_uuid) REFERENCES ar_routes(uuid) ON DELETE CASCADE,
+      FOREIGN KEY (resource_uuid) REFERENCES ar_resources(uuid) ON DELETE CASCADE,
+      UNIQUE KEY (route_uuid, step_order)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `;
+
   try {
     await pool.execute(createResourcesTable);
     await pool.execute(createMarkersTable);
     await pool.execute(createUsageTable);
+    await pool.execute(createRoutesTable);
+    await pool.execute(createRouteStepsTable);
     console.log('✅ Tablas creadas/verificadas');
   } catch (error) {
     console.error('❌ Error creando tablas:', error);

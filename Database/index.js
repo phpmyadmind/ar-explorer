@@ -52,6 +52,21 @@ const upload = multer({
   }
 });
 
+const generateQrCode = (uuid, type) => {
+  // Asegurar que existe el directorio
+  const qrDir = 'qrcodes';
+  if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+
+  const qrData = `ar://${type}/${uuid}`; // e.g. ar://resource/uuid or ar://route/uuid
+  const qrCode = qr.image(qrData, { type: 'png' });
+  const qrFilename = `${uuid}.png`;
+  const qrPath = path.join(qrDir, qrFilename);
+  qrCode.pipe(fs.createWriteStream(qrPath));
+
+  return `/qrcodes/${qrFilename}`;
+};
+
+
 // 📊 API Routes Actualizadas para MySQL
 
 // Crear nuevo recurso AR
@@ -61,19 +76,8 @@ app.post('/api/resources', upload.single('content'), async (req, res) => {
     const { name, type, markerType, markerData } = req.body;
     const uuid = uuidv4();
     const contentUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
-    // Generar QR Code
-    const qrCode = qr.image(`ar://resource/${uuid}`, { type: 'png' });
-    const qrFilename = `${uuid}.png`;
-    const qrPath = path.join('qrcodes', qrFilename);
+    const qrCodeUrl = generateQrCode(uuid, 'resource');
     
-    // Asegurar que existe el directorio
-    if (!fs.existsSync('qrcodes')) fs.mkdirSync('qrcodes', { recursive: true });
-    
-    qrCode.pipe(fs.createWriteStream(qrPath));
-
-    const qrCodeUrl = `/qrcodes/${qrFilename}`;
-
     connection = await pool.getConnection();
     
     // Insertar recurso
@@ -243,6 +247,126 @@ app.delete('/api/resources/:uuid', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// --- Rutas para AR Routes ---
+
+// Crear una nueva ruta
+app.post('/api/routes', async (req, res) => {
+    let connection;
+    try {
+        const { name, description, steps } = req.body; // steps: [{ resource_uuid, step_order }]
+        
+        if (!name || !steps || !Array.isArray(steps) || steps.length === 0) {
+            return res.status(400).json({ error: 'Name and steps are required.' });
+        }
+
+        const routeUuid = uuidv4();
+        const qrCodeUrl = generateQrCode(routeUuid, 'route');
+
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        // Insertar la ruta
+        await connection.execute(
+            `INSERT INTO ar_routes (uuid, name, description, qr_code_url) VALUES (?, ?, ?, ?)`,
+            [routeUuid, name, description, qrCodeUrl]
+        );
+
+        // Insertar los pasos
+        for (const step of steps) {
+            await connection.execute(
+                `INSERT INTO ar_route_steps (route_uuid, resource_uuid, step_order) VALUES (?, ?, ?)`,
+                [routeUuid, step.resource_uuid, step.step_order]
+            );
+        }
+
+        await connection.commit();
+
+        res.status(201).json({
+            uuid: routeUuid,
+            name,
+            description,
+            qrCodeUrl,
+            steps
+        });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error('Error creating route:', error);
+        res.status(500).json({ error: 'Failed to create route' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
+// Obtener todas las rutas
+app.get('/api/routes', async (req, res) => {
+    try {
+        const [routes] = await pool.execute(`
+            SELECT r.uuid, r.name, r.description, r.qr_code_url, r.created_at, COUNT(rs.id) as step_count
+            FROM ar_routes r
+            LEFT JOIN ar_route_steps rs ON r.uuid = rs.route_uuid
+            GROUP BY r.uuid
+            ORDER BY r.created_at DESC
+        `);
+        res.json(routes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Obtener una ruta específica con sus pasos
+app.get('/api/routes/:uuid', async (req, res) => {
+    try {
+        const { uuid } = req.params;
+
+        const [routeRows] = await pool.execute(
+            `SELECT * FROM ar_routes WHERE uuid = ?`,
+            [uuid]
+        );
+
+        if (routeRows.length === 0) {
+            return res.status(404).json({ error: 'Route not found' });
+        }
+
+        const [stepRows] = await pool.execute(`
+            SELECT rs.step_order, res.*
+            FROM ar_route_steps rs
+            JOIN ar_resources res ON rs.resource_uuid = res.uuid
+            WHERE rs.route_uuid = ?
+            ORDER BY rs.step_order ASC
+        `, [uuid]);
+        
+        const route = routeRows[0];
+        route.steps = stepRows;
+
+        res.json(route);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Eliminar una ruta
+app.delete('/api/routes/:uuid', async (req, res) => {
+    try {
+        const { uuid } = req.params;
+        
+        const [result] = await pool.execute(
+            'DELETE FROM ar_routes WHERE uuid = ?',
+            [uuid]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Route not found' });
+        }
+
+        res.json({ message: 'Route deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 // Endpoint para obtener métricas generales
 app.get('/api/metrics', async (req, res) => {
