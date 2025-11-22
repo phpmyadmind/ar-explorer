@@ -8,6 +8,7 @@ import QRCode from 'qrcode';
 import { Card, CardContent, CardTitle, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { QrCode, Info, Loader2, AlertCircle } from 'lucide-react';
 import type { Model } from '@/lib/models';
 import { staticModels } from '@/lib/models';
