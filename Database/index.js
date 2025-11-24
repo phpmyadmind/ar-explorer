@@ -13,12 +13,8 @@ const app = express();
 const PORT = 5000;
 
 // Middleware
-// Configuración explícita de CORS para permitir todas las conexiones
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Configuración simple de CORS para permitir todas las conexiones.
+app.use(cors());
 
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
