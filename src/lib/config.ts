@@ -3,12 +3,11 @@
 // Helper para determinar la URL base de la API dinámicamente
 const getApiUrl = () => {
   if (typeof window === 'undefined') {
-    // Lado del servidor, usar la variable de entorno o el default para localhost
-    return process.env.NEXT_PUBLIC_API_URL || 'ar.cardio-adium.com'; //http://localhost:5000';
+    // Lado del servidor, usar la variable de entorno o el default para producción
+    return process.env.NEXT_PUBLIC_API_URL || 'https://ar.cardio-adium.com';
   }
+  
   // Lado del cliente, construir la URL para evitar problemas de contenido mixto
-  // Asume que la API está en el puerto 5000 del mismo host.
-  // Reemplaza el puerto del frontend (e.g. 9002) por el puerto de la API (5000).
   const currentHost = window.location.hostname;
   const protocol = window.location.protocol;
 
@@ -17,9 +16,8 @@ const getApiUrl = () => {
     return 'http://localhost:5000';
   }
   
-  // Para entornos de producción/despliegue, usar https y el puerto 5000.
-  // Esto asume que el backend está expuesto en el mismo dominio pero en el puerto 5000 y con HTTPS.
-  return `${protocol}//${currentHost.replace(/:\d+$/, '')}:5000`;
+  // Para cualquier otro entorno (producción/despliegue), usar la URL base de producción.
+  return 'https://ar.cardio-adium.com';
 };
 
 export const config = {
@@ -28,6 +26,8 @@ export const config = {
   },
   apiBasePath: '/api',
   get apiBaseUrl() {
+    // La URL base para las llamadas a la API ya incluye '/api' en muchos casos,
+    // así que construimos la URL de recursos aquí para evitar duplicación.
     return `${this.apiUrl}${this.apiBasePath}`;
   },
   // Configuración AR
