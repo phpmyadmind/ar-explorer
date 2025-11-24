@@ -2,13 +2,14 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
+  host: process.env.DB_HOST || '179.50.79.19',
+  user: process.env.DB_USER || 'app_connector',
+  password: process.env.DB_PASSWORD || 'Pcn123456!',
   database: process.env.DB_NAME || 'ar_platform',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  port: process.env.DB_PORT || 3306
 };
 
 // Crear pool de conexiones
@@ -16,23 +17,74 @@ const pool = mysql.createPool(dbConfig);
 
 // Inicializar base de datos
 const initializeDatabase = async () => {
+  let connection;
   try {
-    const connection = await mysql.createConnection({
-      host: dbConfig.host,
-      user: dbConfig.user,
-      password: dbConfig.password
-    });
+    // Primero intentar crear la base de datos (puede fallar por permisos)
+    try {
+      connection = await mysql.createConnection({
+        host: dbConfig.host,
+        port: dbConfig.port,
+        user: dbConfig.user,
+        password: dbConfig.password
+      });
 
-    // Crear base de datos si no existe
-    await connection.execute(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\``);
-    console.log('✅ Base de datos verificada/creada');
-    
-    await connection.end();
+      console.log(`🔌 Conectado al servidor MySQL: ${dbConfig.host}:${dbConfig.port}`);
 
-    // Crear tablas
+      // Intentar crear base de datos si no existe
+      await connection.execute(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\``);
+      console.log(`✅ Base de datos '${dbConfig.database}' verificada/creada`);
+      
+      await connection.end();
+    } catch (createError) {
+      // Si falla por permisos de creación, intentar conectarse directamente a la BD
+      if (createError.code === 'ER_DBACCESS_DENIED_ERROR' || createError.code === 'ER_ACCESS_DENIED_ERROR') {
+        console.log(`⚠️  No se pueden crear bases de datos con este usuario. Intentando conectar a '${dbConfig.database}'...`);
+        
+        if (connection) await connection.end();
+        
+        // Intentar conectarse directamente a la base de datos existente
+        try {
+          connection = await mysql.createConnection({
+            host: dbConfig.host,
+            port: dbConfig.port,
+            user: dbConfig.user,
+            password: dbConfig.password,
+            database: dbConfig.database
+          });
+          
+          // Probar la conexión
+          await connection.execute('SELECT 1');
+          console.log(`✅ Conectado a la base de datos existente '${dbConfig.database}'`);
+          await connection.end();
+        } catch (connectError) {
+          if (connectError.code === 'ER_BAD_DB_ERROR') {
+            throw new Error(`La base de datos '${dbConfig.database}' no existe. Por favor, créala manualmente o contacta al administrador para que te otorgue permisos de creación.`);
+          } else {
+            throw connectError;
+          }
+        }
+      } else {
+        // Otro tipo de error, re-lanzarlo
+        throw createError;
+      }
+    }
+
+    // Ahora crear las tablas usando el pool que ya tiene la base de datos configurada
     await createTables();
   } catch (error) {
-    console.error('❌ Error inicializando base de datos:', error);
+    console.error('❌ Error inicializando base de datos:', error.message);
+    if (error.code === 'ECONNREFUSED') {
+      console.error(`   Verifica que el servidor MySQL esté corriendo en ${dbConfig.host}:${dbConfig.port}`);
+    } else if (error.code === 'ER_ACCESS_DENIED_ERROR' || error.code === 'ER_DBACCESS_DENIED_ERROR') {
+      console.error(`   Verifica las credenciales de usuario: ${dbConfig.user}`);
+      console.error(`   O que la base de datos '${dbConfig.database}' exista y el usuario tenga permisos sobre ella`);
+    } else if (error.code === 'ENOTFOUND') {
+      console.error(`   No se pudo resolver el host: ${dbConfig.host}`);
+    } else if (error.code === 'ER_BAD_DB_ERROR') {
+      console.error(`   La base de datos '${dbConfig.database}' no existe.`);
+      console.error(`   Por favor, créala manualmente o solicita permisos de creación al administrador.`);
+    }
+    throw error; // Re-lanzar el error para que el servidor no inicie si hay problemas
   }
 };
 
@@ -46,6 +98,7 @@ const createTables = async () => {
       marker_type ENUM('pattern', 'qrcode', 'aruco') NOT NULL,
       marker_data TEXT,
       content_url VARCHAR(500),
+      content_base64 LONGTEXT,
       qr_code_url VARCHAR(500),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

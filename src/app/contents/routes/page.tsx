@@ -29,7 +29,8 @@ interface ARRoute {
     created_at: string;
 }
 
-const API_URL = 'http://localhost:5000';
+import { config } from '@/lib/config';
+const API_URL = config.apiUrl;
 
 export default function RoutesPage() {
     const [routes, setRoutes] = useState<ARRoute[]>([]);
@@ -96,15 +97,24 @@ export default function RoutesPage() {
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
-        if (!newRouteName || selectedResources.length === 0) {
-            alert('Please provide a name and select at least one step.');
+        
+        // Validación
+        if (!newRouteName || newRouteName.trim().length === 0) {
+            setError('Por favor, ingresa un nombre para la ruta.');
+            return;
+        }
+        
+        if (selectedResources.length === 0) {
+            setError('Por favor, selecciona al menos un recurso para la ruta.');
             return;
         }
 
         setIsSubmitting(true);
+        setError(null);
+        
         const routeData = {
-            name: newRouteName,
-            description: newRouteDescription,
+            name: newRouteName.trim(),
+            description: newRouteDescription?.trim() || null,
             steps: selectedResources.map((res, index) => ({
                 resource_uuid: res.uuid,
                 step_order: index
@@ -118,15 +128,23 @@ export default function RoutesPage() {
                 body: JSON.stringify(routeData),
             });
 
-            if (!response.ok) throw new Error('Failed to create route');
+            const data = await response.json();
 
+            if (!response.ok) {
+                const errorMessage = data.error || data.details || 'Error al crear la ruta';
+                throw new Error(errorMessage);
+            }
+
+            // Éxito
             fetchData();
             setIsDialogOpen(false);
             setNewRouteName('');
             setNewRouteDescription('');
             setSelectedResources([]);
         } catch (err: any) {
-            alert(`Error: ${err.message}`);
+            const errorMessage = err.message || 'Error desconocido al crear la ruta';
+            setError(errorMessage);
+            console.error('Error creating route:', err);
         } finally {
             setIsSubmitting(false);
         }
@@ -159,16 +177,39 @@ export default function RoutesPage() {
                             <DialogTitle>Create New AR Route</DialogTitle>
                             <DialogDescription>Define a sequence of AR resources to create a guided experience.</DialogDescription>
                         </DialogHeader>
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                                <AlertCircle className="inline h-4 w-4 mr-2" />
+                                {error}
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8 overflow-y-auto py-4">
                             {/* Left Column: Details & Steps */}
                             <div className="flex flex-col gap-4">
                                 <div>
-                                    <Label htmlFor="routeName">Route Name</Label>
-                                    <Input id="routeName" value={newRouteName} onChange={e => setNewRouteName(e.target.value)} placeholder="e.g., 'Campus Art Tour'" required />
+                                    <Label htmlFor="routeName">Nombre de la Ruta *</Label>
+                                    <Input 
+                                        id="routeName" 
+                                        value={newRouteName} 
+                                        onChange={e => {
+                                            setNewRouteName(e.target.value);
+                                            setError(null);
+                                        }} 
+                                        placeholder="Ej: Tour de Arte del Campus" 
+                                        required 
+                                    />
                                 </div>
                                 <div>
-                                    <Label htmlFor="routeDescription">Description</Label>
-                                    <Textarea id="routeDescription" value={newRouteDescription} onChange={e => setNewRouteDescription(e.target.value)} placeholder="A short description of the route." />
+                                    <Label htmlFor="routeDescription">Descripción</Label>
+                                    <Textarea 
+                                        id="routeDescription" 
+                                        value={newRouteDescription} 
+                                        onChange={e => {
+                                            setNewRouteDescription(e.target.value);
+                                            setError(null);
+                                        }} 
+                                        placeholder="Una breve descripción de la ruta." 
+                                    />
                                 </div>
                                 <div className="mt-4">
                                     <h3 className="font-semibold mb-2">Route Steps</h3>

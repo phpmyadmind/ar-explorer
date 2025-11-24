@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, PlusCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Trash2, PlusCircle, Loader2, AlertCircle, Edit } from 'lucide-react';
 import Image from 'next/image';
 
 // Definir el tipo para los recursos, basado en la API
@@ -17,20 +17,28 @@ interface ARResource {
     name: string;
     type: 'image' | 'video' | '3d-model';
     marker_type: 'pattern' | 'qrcode' | 'aruco';
+    marker_data?: string | null;
     content_url: string;
     qr_code_url: string;
     access_count: number;
     last_accessed: string | null;
 }
 
-const API_URL = 'http://localhost:5000';
+import { config } from '@/lib/config';
+const API_URL = config.apiUrl;
 
 export default function ContentsPage() {
     const [resources, setResources] = useState<ARResource[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [newResource, setNewResource] = useState({ name: '', type: 'video' as 'video' | 'image' | '3d-model', markerType: 'qrcode' as 'pattern' | 'qrcode' | 'aruco' });
+    const [editingResource, setEditingResource] = useState<ARResource | null>(null);
+    const [newResource, setNewResource] = useState({ 
+        name: '', 
+        type: 'video' as 'video' | 'image' | '3d-model', 
+        markerType: 'qrcode' as 'pattern' | 'qrcode' | 'aruco',
+        markerData: '' 
+    });
     const [file, setFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -62,39 +70,80 @@ export default function ContentsPage() {
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
-        if (!file || !newResource.name) {
-            alert('Please fill all fields and select a file.');
+        
+        // Validación de datos
+        if (!editingResource && !file) {
+            setError('Por favor, selecciona un archivo.');
+            return;
+        }
+        
+        if (!newResource.name || newResource.name.trim().length === 0) {
+            setError('Por favor, ingresa un nombre para el recurso.');
             return;
         }
 
         setIsSubmitting(true);
+        setError(null);
+        
         const formData = new FormData();
-        formData.append('name', newResource.name);
+        formData.append('name', newResource.name.trim());
         formData.append('type', newResource.type);
-        formData.append('markerType', newResource.markerType);
-        formData.append('content', file);
+        formData.append('markerType', newResource.markerType || 'qrcode');
+        if (newResource.markerData) {
+            formData.append('markerData', newResource.markerData);
+        }
+        if (file) {
+            formData.append('content', file);
+        }
 
         try {
-            const response = await fetch(`${API_URL}/api/resources`, {
-                method: 'POST',
+            const url = editingResource 
+                ? `${API_URL}/api/resources/${editingResource.uuid}`
+                : `${API_URL}/api/resources`;
+            
+            const response = await fetch(url, {
+                method: editingResource ? 'PUT' : 'POST',
                 body: formData,
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create resource');
+                const errorMessage = data.error || data.details || `Error al ${editingResource ? 'actualizar' : 'crear'} el recurso`;
+                const errorDetails = data.details ? `\n\nDetalles: ${data.details}` : '';
+                throw new Error(`${errorMessage}${errorDetails}`);
             }
 
-            await response.json();
+            // Éxito
             fetchResources(); // Recargar la lista
-            setIsDialogOpen(false); // Cerrar el diálogo
-            setNewResource({ name: '', type: 'video', markerType: 'qrcode' }); // Resetear formulario
-            setFile(null);
+            resetForm(); // Resetear formulario
         } catch (err: any) {
-            alert(`Error: ${err.message}`);
+            const errorMessage = err.message || `Error desconocido al ${editingResource ? 'actualizar' : 'crear'} el recurso`;
+            setError(errorMessage);
+            console.error(`Error ${editingResource ? 'updating' : 'creating'} resource:`, err);
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const resetForm = () => {
+        setIsDialogOpen(false);
+        setEditingResource(null);
+        setNewResource({ name: '', type: 'video', markerType: 'qrcode', markerData: '' });
+        setFile(null);
+        setError(null);
+    };
+
+    const handleEdit = (resource: ARResource) => {
+        setEditingResource(resource);
+        setNewResource({
+            name: resource.name,
+            type: resource.type,
+            markerType: resource.marker_type,
+            markerData: (resource as any).marker_data || ''
+        });
+        setFile(null);
+        setIsDialogOpen(true);
     };
     
     const deleteResource = async (uuid: string) => {
@@ -130,39 +179,101 @@ export default function ContentsPage() {
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Add New AR Resource</DialogTitle>
+                            <DialogTitle>{editingResource ? 'Edit AR Resource' : 'Add New AR Resource'}</DialogTitle>
                             <DialogDescription>
-                                Upload a new asset to be used in an AR experience.
+                                {editingResource 
+                                    ? 'Update the resource information. Leave file empty to keep the current file.'
+                                    : 'Upload a new asset to be used in an AR experience.'}
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleSubmit}>
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                                    <AlertCircle className="inline h-4 w-4 mr-2" />
+                                    {error}
+                                </div>
+                            )}
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">Name</Label>
-                                    <Input id="name" value={newResource.name} onChange={(e) => setNewResource({...newResource, name: e.target.value})} className="col-span-3" placeholder="e.g., 'Corporate Video'" />
+                                    <Label htmlFor="name" className="text-right">Nombre *</Label>
+                                    <Input 
+                                        id="name" 
+                                        value={newResource.name} 
+                                        onChange={(e) => {
+                                            setNewResource({...newResource, name: e.target.value});
+                                            setError(null);
+                                        }} 
+                                        className="col-span-3" 
+                                        placeholder="Ej: Video Corporativo" 
+                                        required
+                                    />
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="type" className="text-right">Type</Label>
+                                    <Label htmlFor="type" className="text-right">Tipo *</Label>
                                     <Select value={newResource.type} onValueChange={(value: 'image' | 'video' | '3d-model') => setNewResource({...newResource, type: value })}>
                                         <SelectTrigger className="col-span-3">
-                                            <SelectValue placeholder="Select type" />
+                                            <SelectValue placeholder="Selecciona el tipo" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="video">Video</SelectItem>
-                                            <SelectItem value="image">Image</SelectItem>
-                                            <SelectItem value="3d-model">3D Model</SelectItem>
+                                            <SelectItem value="image">Imagen</SelectItem>
+                                            <SelectItem value="3d-model">Modelo 3D</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="content" className="text-right">File</Label>
-                                    <Input id="content" type="file" onChange={handleFileChange} className="col-span-3" />
+                                    <Label htmlFor="markerType" className="text-right">Marcador</Label>
+                                    <Select value={newResource.markerType} onValueChange={(value: 'pattern' | 'qrcode' | 'aruco') => setNewResource({...newResource, markerType: value })}>
+                                        <SelectTrigger className="col-span-3">
+                                            <SelectValue placeholder="Tipo de marcador" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="qrcode">QR Code</SelectItem>
+                                            <SelectItem value="pattern">Pattern</SelectItem>
+                                            <SelectItem value="aruco">ArUco</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="markerData" className="text-right">Datos del Marcador</Label>
+                                    <Input 
+                                        id="markerData" 
+                                        value={newResource.markerData}
+                                        onChange={(e) => {
+                                            setNewResource({...newResource, markerData: e.target.value});
+                                            setError(null);
+                                        }}
+                                        className="col-span-3" 
+                                        placeholder="Opcional: datos adicionales del marcador"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="content" className="text-right">Archivo {!editingResource && '*'}</Label>
+                                    <Input 
+                                        id="content" 
+                                        type="file" 
+                                        onChange={(e) => {
+                                            handleFileChange(e);
+                                            setError(null);
+                                        }} 
+                                        className="col-span-3" 
+                                        required={!editingResource}
+                                        accept=".jpg,.jpeg,.png,.mp4,.webm,.mov,.avi,.ogg,.glb,.gltf"
+                                    />
+                                    {editingResource && (
+                                        <p className="col-span-3 col-start-2 text-xs text-muted-foreground">
+                                            Deja vacío para mantener el archivo actual
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <DialogFooter>
+                                <Button type="button" variant="outline" onClick={resetForm}>
+                                    Cancelar
+                                </Button>
                                 <Button type="submit" disabled={isSubmitting}>
                                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Create
+                                    {editingResource ? 'Actualizar' : 'Crear'}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -204,9 +315,14 @@ export default function ContentsPage() {
                                     <TableCell><span className="capitalize bg-muted px-2 py-1 rounded-full text-xs font-medium">{resource.type.replace('-',' ')}</span></TableCell>
                                     <TableCell className="text-center">{resource.access_count}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => deleteResource(resource.uuid)}>
-                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEdit(resource)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => deleteResource(resource.uuid)}>
+                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}

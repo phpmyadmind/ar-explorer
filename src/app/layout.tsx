@@ -19,6 +19,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Asegurar que React esté disponible globalmente antes de cargar React Three Fiber
+              if (typeof window !== 'undefined' && !window.__REACT_LOADED__) {
+                window.__REACT_LOADED__ = true;
+              }
+            `,
+          }}
+        />
       </head>
       <body className="font-body antialiased">
         <ThemeProvider
