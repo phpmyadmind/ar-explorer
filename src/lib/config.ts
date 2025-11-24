@@ -4,7 +4,7 @@
 const getApiUrl = () => {
   if (typeof window === 'undefined') {
     // Lado del servidor, usar la variable de entorno o el default para localhost
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://179.50.79.19:5000';
   }
   // Lado del cliente, construir la URL para evitar problemas de contenido mixto
   // Asume que la API está en el puerto 5000 del mismo host.
