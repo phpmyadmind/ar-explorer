@@ -20,51 +20,50 @@ import type { Model } from '@/lib/models';
 import * as THREE from 'three';
 import { cn } from '@/lib/utils';
 
-// Componente para manejar imágenes/videos desde base64
-const Base64MediaScene = memo(function Base64MediaScene({ path, type, scale = 1 }: { path: string; type: 'video' | 'image'; scale?: number }) {
+// Componente para manejar imágenes/videos desde base64 o URL
+const MediaContentScene = memo(function MediaContentScene({ path, type, scale = 1 }: { path: string; type: 'video' | 'image'; scale?: number }) {
   const [data, setData] = useState<{ texture: THREE.Texture; aspectRatio: number } | null>(null);
   const [error, setError] = useState<string|null>(null);
+  const [isPlaying, setIsPlaying] = useState(type === 'image'); // Autoplay for images
 
   useEffect(() => {
     let alive = true;
     let videoEl: HTMLVideoElement | null = null;
     let texture: THREE.Texture | null = null;
+    let objectUrl: string | undefined;
 
-    if (type === 'image') {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
+    const createTexture = (media: HTMLImageElement | HTMLVideoElement) => {
         if (!alive) return;
-        texture = new THREE.Texture(img);
+        texture = (media instanceof HTMLVideoElement) ? new THREE.VideoTexture(media) : new THREE.Texture(media);
         texture.needsUpdate = true;
         texture.colorSpace = THREE.SRGBColorSpace;
-        setData({ texture, aspectRatio: img.width / img.height });
-      };
-      img.onerror = () => alive && setError('Failed to load image.');
-      img.src = path;
+        const aspectRatio = (media instanceof HTMLVideoElement) 
+            ? media.videoWidth / media.videoHeight 
+            : media.width / media.height;
+        setData({ texture, aspectRatio });
+    };
+
+    if (type === 'image') {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => createTexture(img);
+        img.onerror = () => alive && setError('Failed to load image.');
+        img.src = path;
     } else if (type === 'video') {
-      videoEl = document.createElement('video');
-      videoEl.crossOrigin = 'anonymous';
-      videoEl.playsInline = true;
-      videoEl.muted = false;
-      videoEl.loop = true;
-      videoEl.autoplay = false;
-      
-      const onCanPlay = () => {
-        if (!alive || !videoEl) return;
-        videoEl.play().then(() => {
-          if (!alive || !videoEl) return;
-          texture = new THREE.VideoTexture(videoEl);
-          texture.colorSpace = THREE.SRGBColorSpace;
-          setData({ texture, aspectRatio: videoEl.videoWidth / videoEl.videoHeight });
-        }).catch(e => {
-            console.error("Video play failed:", e);
-            if(alive) setError('Video playback was blocked by the browser.');
-        });
-      };
-      videoEl.addEventListener('canplay', onCanPlay);
-      videoEl.onerror = () => alive && setError('Failed to load video.');
-      videoEl.src = path;
+        videoEl = document.createElement('video');
+        videoEl.crossOrigin = 'anonymous';
+        videoEl.playsInline = true;
+        videoEl.muted = false;
+        videoEl.loop = true;
+        videoEl.autoplay = false; // We control play with state
+
+        const onCanPlay = () => {
+            if (!videoEl) return;
+            createTexture(videoEl);
+        };
+        videoEl.addEventListener('canplay', onCanPlay);
+        videoEl.onerror = () => alive && setError('Failed to load video.');
+        videoEl.src = path;
     }
     
     return () => {
@@ -72,39 +71,57 @@ const Base64MediaScene = memo(function Base64MediaScene({ path, type, scale = 1 
       if (videoEl) {
         videoEl.pause();
         videoEl.src = '';
-        videoEl.removeEventListener('canplay', onCanPlay);
       }
-      if (texture) {
-        texture.dispose();
-      }
+      if (texture) texture.dispose();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [path, type]);
-
-  const scene = useThree((state) => state.scene);
-  useEffect(() => {
-      if (data?.texture) {
-          scene.background = data.texture;
-      }
-  }, [data, scene]);
+  
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (data?.texture && data.texture.source.data instanceof HTMLVideoElement) {
+        data.texture.source.data.play().then(() => {
+            setIsPlaying(true);
+        }).catch(err => {
+            console.error("Error playing video:", err);
+            setError("Could not play video. Please interact with the page and try again.");
+        });
+    }
+  };
 
   if (error) {
     return (
-        <mesh>
-          <boxGeometry args={[2, 1, 0.1]} />
-          <meshBasicMaterial color="red" />
-        </mesh>
+        <Html center>
+            <div className="text-white bg-red-500/50 p-2 rounded-md text-xs">{error}</div>
+        </Html>
     )
   }
   
-  if (!data) return null;
+  if (!data || !data.texture) return null;
 
   return (
-    <mesh scale={[data.aspectRatio * scale, scale, 1]} position={[0, 0, 0]}>
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial map={data.texture} toneMapped={false} transparent />
-    </mesh>
+    <group>
+        {!isPlaying && type === 'video' && (
+            <group scale={[data.aspectRatio * scale, scale, 1]} position={[0, 0, 0]}>
+                <planeGeometry args={[1, 1]} />
+                <meshBasicMaterial color="black" toneMapped={false} transparent opacity={0.7} />
+                <Html center>
+                    <Button size="icon" className="w-16 h-16 rounded-full bg-black/50" onClick={handlePlay}>
+                        <PlayIcon className="w-8 h-8 ml-1" />
+                    </Button>
+                </Html>
+            </group>
+        )}
+        {isPlaying && (
+            <mesh scale={[data.aspectRatio * scale, scale, 1]} position={[0, 0, 0]}>
+                <planeGeometry args={[1, 1]} />
+                <meshBasicMaterial map={data.texture} toneMapped={false} transparent />
+            </mesh>
+        )}
+    </group>
   );
 });
+
 
 // Componente para manejar la carga de modelos 3D
 const ModelScene = memo(function ModelScene({ path, scale }: { path: string, scale: number }) {
@@ -122,106 +139,6 @@ const ModelScene = memo(function ModelScene({ path, scale }: { path: string, sca
     </Suspense>
   );
 });
-
-const MediaScene = memo(function MediaScene({ path, type, scale = 1 }: { path: string; type: 'video' | 'image'; scale?: number }) {
-  
-  if (type === 'image') {
-      return <URLImageScene path={path} scale={scale} />
-  }
-  
-  return <URLVideoScene path={path} type={type} scale={scale} />;
-});
-
-function URLImageScene({ path, scale = 1 }: { path: string, scale?: number }) {
-  const [data, setData] = useState<{ texture: THREE.Texture; aspectRatio: number } | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      if (!alive) return;
-      const texture = new THREE.Texture(img);
-      texture.needsUpdate = true;
-      texture.colorSpace = THREE.SRGBColorSpace;
-      setData({ texture, aspectRatio: img.width / img.height });
-    };
-    img.onerror = () => console.error('Failed to load image from URL:', path);
-    img.src = path;
-    return () => {
-      alive = false;
-      data?.texture.dispose();
-    };
-  }, [path, data]);
-
-  if (!data) return null;
-
-  return (
-    <mesh scale={[data.aspectRatio * scale, scale, 1]}>
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial map={data.texture} toneMapped={false} />
-    </mesh>
-  );
-}
-
-function URLVideoScene({ path, scale = 1 }: { path: string, type: 'video' | 'image', scale?: number }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  
-  const texture = useVideoTexture(path, {
-    start: isPlaying,
-    muted: false,
-    loop: true,
-    crossOrigin: 'anonymous',
-  });
-
-  const [aspectRatio, setAspectRatio] = useState(16 / 9);
-
-  useEffect(() => {
-    const video = texture.source.data as HTMLVideoElement;
-    const updateAspect = () => {
-      if (video.videoWidth > 0) {
-        setAspectRatio(video.videoWidth / video.videoHeight);
-      }
-    };
-    if (video.readyState > 0) {
-      updateAspect();
-    } else {
-      video.addEventListener('loadedmetadata', updateAspect);
-    }
-    return () => video.removeEventListener('loadedmetadata', updateAspect);
-  }, [texture]);
-  
-  const handlePlay = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsPlaying(true);
-    const video = texture.source.data as HTMLVideoElement;
-    video.play().catch(err => console.error("Error playing video:", err));
-  };
-
-  return (
-    <>
-      {!isPlaying && (
-        <group>
-            <mesh scale={[aspectRatio * scale, scale, 1]}>
-                <planeGeometry args={[1, 1]} />
-                <meshBasicMaterial color="black" toneMapped={false} />
-            </mesh>
-            <Html center>
-                <Button size="icon" className="w-16 h-16 rounded-full bg-black/50" onClick={handlePlay}>
-                    <PlayIcon className="w-8 h-8 ml-1" />
-                </Button>
-            </Html>
-        </group>
-      )}
-      {isPlaying && (
-         <mesh scale={[aspectRatio * scale, scale, 1]}>
-          <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial map={texture} toneMapped={false} transparent />
-        </mesh>
-      )}
-    </>
-  );
-}
 
 // Controles AR mejorados
 const ARControls = memo(function ARControls({ 
@@ -362,9 +279,10 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
         gl={{
           antialias: true,
           alpha: true,
+          powerPreference: 'high-performance'
         }}
         onCreated={({ gl }) => {
-          gl.setClearAlpha(0);
+          gl.setClearColor(0x000000, 0); // Fondo transparente
         }}
         camera={{ position: [0, 0, 2], fov: 75 }}
         className="absolute inset-0 w-full h-full"
@@ -384,7 +302,7 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
               </>
             )}
             {(model.type === 'video' || model.type === 'image') && (
-              <MediaScene path={model.path} type={model.type} scale={1} />
+              <MediaContentScene path={model.path} type={model.type} scale={1} />
             )}
           </group>
         )}
