@@ -8,10 +8,11 @@ import {
   useVideoTexture, 
   Gltf,
   PerspectiveCamera,
-  ContactShadows
+  ContactShadows,
+  Html
 } from '@react-three/drei';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Box, VideoOff, CameraOff, Maximize2, Minimize2, RotateCw, ZoomIn, ZoomOut, RefreshCw, Play as PlayIcon } from 'lucide-react';
+import { Loader2, Box, VideoOff, Camera, Orbit, RefreshCw, Play as PlayIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card } from '@/components/ui/card';
@@ -122,15 +123,12 @@ const ModelScene = memo(function ModelScene({ path, scale }: { path: string, sca
   );
 });
 
-
 const MediaScene = memo(function MediaScene({ path, type, scale = 1 }: { path: string; type: 'video' | 'image'; scale?: number }) {
-  const isBase64 = path?.startsWith('data:');
   
   if (type === 'image') {
       return <URLImageScene path={path} scale={scale} />
   }
   
-  // Para video, ahora usamos URLVideoScene que maneja la interacción del usuario
   return <URLVideoScene path={path} type={type} scale={scale} />;
 });
 
@@ -169,7 +167,6 @@ function URLImageScene({ path, scale = 1 }: { path: string, scale?: number }) {
 function URLVideoScene({ path, scale = 1 }: { path: string, type: 'video' | 'image', scale?: number }) {
   const [isPlaying, setIsPlaying] = useState(false);
   
-  // Creamos la textura pero no la iniciamos automáticamente
   const texture = useVideoTexture(path, {
     start: isPlaying,
     muted: false,
@@ -205,17 +202,15 @@ function URLVideoScene({ path, scale = 1 }: { path: string, type: 'video' | 'ima
     <>
       {!isPlaying && (
         <group>
-            {/* Fondo placeholder mientras el video no se reproduce */}
             <mesh scale={[aspectRatio * scale, scale, 1]}>
                 <planeGeometry args={[1, 1]} />
                 <meshBasicMaterial color="black" toneMapped={false} />
             </mesh>
-            {/* Icono de Play en 3D */}
-            <HtmlAs3D>
-                <Button size="icon" className="w-16 h-16 rounded-full" onClick={handlePlay}>
-                    <PlayIcon className="w-8 h-8" />
+            <Html center>
+                <Button size="icon" className="w-16 h-16 rounded-full bg-black/50" onClick={handlePlay}>
+                    <PlayIcon className="w-8 h-8 ml-1" />
                 </Button>
-            </HtmlAs3D>
+            </Html>
         </group>
       )}
       {isPlaying && (
@@ -226,35 +221,6 @@ function URLVideoScene({ path, scale = 1 }: { path: string, type: 'video' | 'ima
       )}
     </>
   );
-}
-
-
-// Componente para renderizar HTML como si fuera un objeto 3D
-function HtmlAs3D({ children }: { children: React.ReactNode }) {
-    const { scene, camera } = useThree();
-    const groupRef = useRef<THREE.Group>(null);
-
-    useFrame(() => {
-        if (groupRef.current) {
-            // Posicionar el grupo en frente de la cámara
-            groupRef.current.position.copy(camera.position);
-            groupRef.current.rotation.copy(camera.rotation);
-            group_current_quaternion = camera.quaternion;
-            // Moverlo un poco hacia adelante
-            groupRef.current.translateZ(-1.5);
-        }
-    });
-
-    // Este es un truco, el div se renderizará fuera del canvas
-    // pero el grupo 3D vacío nos sirve para posicionarlo.
-    // Necesitaríamos @react-three/drei Html, pero para no añadir más dependencias,
-    // usamos este enfoque más simple.
-    let group_current_quaternion: any;
-    return (
-        <group ref={groupRef}>
-            {/* El contenido real se renderizaría fuera del canvas con CSS */}
-        </group>
-    );
 }
 
 // Controles AR mejorados
@@ -285,7 +251,7 @@ const ARControls = memo(function ARControls({
           className="h-6 w-6"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {isExpanded ? <Orbit className="h-4 w-4" /> : <Orbit className="h-4 w-4" />}
         </Button>
       </div>
       
@@ -293,14 +259,14 @@ const ARControls = memo(function ARControls({
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1"><ZoomIn className="h-3 w-3" /> Scale</span>
+              <span className="flex items-center gap-1"><Orbit className="h-3 w-3" /> Scale</span>
               <span className="text-muted-foreground">{scale.toFixed(2)}x</span>
             </div>
             <Slider value={[scale]} onValueChange={([value]) => onScaleChange(value)} min={0.1} max={5} step={0.05} />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1"><RotateCw className="h-3 w-3" /> Rotation</span>
+              <span className="flex items-center gap-1"><RefreshCw className="h-3 w-3" /> Rotation</span>
               <span className="text-muted-foreground">{Math.round(rotation)}°</span>
             </div>
             <Slider value={[rotation]} onValueChange={([value]) => onRotationChange(value)} min={0} max={360} step={1} />
@@ -317,12 +283,11 @@ interface ARViewerProps {
 }
 
 export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
-  const [hasCameraPermission, setHasCameraPermission] = useState(true);
+  const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [modelScale, setModelScale] = useState<number>(model?.scale || 1);
   const [modelRotation, setModelRotation] = useState<number>(0);
-  const [isARMode, setIsARMode] = useState(false);
-  const [isSwitching, setIsSwitching] = useState(false);
+  const [isARMode, setIsARMode] = useState(false); // Default to 3D orbit controls
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   
@@ -371,24 +336,12 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
     }
   }, [cleanupCamera]);
 
-  const toggleARMode = useCallback(async () => {
-    setIsSwitching(true);
-    if (isARMode) {
-      cleanupCamera();
-      setIsARMode(false);
-    } else {
-      const success = await setupCamera();
-      if (success) {
-        setIsARMode(true);
-      }
-    }
-    setIsSwitching(false);
-  }, [isARMode, setupCamera, cleanupCamera]);
-
+  // Try to setup camera on mount
   useEffect(() => {
+    setupCamera();
     // Cleanup on component unmount
     return () => cleanupCamera();
-  }, [cleanupCamera]);
+  }, [setupCamera, cleanupCamera]);
 
   const modelTransform = useMemo(() => ({
     rotation: [0, (modelRotation * Math.PI) / 180, 0] as [number, number, number],
@@ -399,7 +352,7 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
     <div className="absolute inset-0 w-full h-full bg-gray-800">
       <video
         ref={videoRef}
-        className={cn("absolute inset-0 w-full h-full object-cover", isARMode ? 'block' : 'hidden')}
+        className={cn("absolute inset-0 w-full h-full object-cover", hasCameraPermission ? 'block' : 'hidden')}
         playsInline
         autoPlay
         muted
@@ -420,7 +373,7 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
         <ambientLight intensity={1.5} />
         <directionalLight position={[5, 10, 7.5]} intensity={2.5} castShadow />
         <pointLight position={[-5, -5, -5]} intensity={0.5} />
-        {!isARMode && <color attach="background" args={['#333']} />}
+        {!hasCameraPermission && <color attach="background" args={['#333']} />}
         
         {model && (
           <group rotation={modelTransform.rotation} scale={modelTransform.scale}>
@@ -459,10 +412,10 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
         />
       )}
 
-      {cameraError && isARMode && (
+      {cameraError && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
             <Alert variant="destructive" className="max-w-md">
-                <CameraOff className="h-5 w-5" />
+                <Camera className="h-5 w-5" />
                 <AlertTitle>Camera Error</AlertTitle>
                 <AlertDescription>{cameraError}</AlertDescription>
                 <Button variant="secondary" size="sm" className="mt-2" onClick={setupCamera}>Try Again</Button>
@@ -474,12 +427,11 @@ export const ARViewer: React.FC<ARViewerProps> = ({ model }) => {
         variant="outline"
         size="lg"
         className="absolute top-20 right-4 z-20 h-12 w-12 rounded-full p-0"
-        onClick={toggleARMode}
-        disabled={isSwitching}
-        title={isARMode ? 'Switch to 3D View' : 'Switch to AR View'}
+        onClick={() => setIsARMode(prev => !prev)}
+        disabled={!hasCameraPermission}
+        title={isARMode ? 'Switch to 3D Orbit View' : 'Switch to AR Device View'}
       >
-        {isSwitching ? <Loader2 className="h-5 w-5 animate-spin" /> : 
-         isARMode ? <VideoOff className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
+        {isARMode ? <Orbit className="h-5 w-5" /> : <Camera className="h-5 w-5" />}
       </Button>
     </div>
   );
