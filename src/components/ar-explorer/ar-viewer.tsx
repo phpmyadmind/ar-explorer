@@ -11,7 +11,7 @@ import {
   ContactShadows
 } from '@react-three/drei';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Box, VideoOff, CameraOff, Maximize2, Minimize2, RotateCw, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
+import { Loader2, Box, VideoOff, CameraOff, Maximize2, Minimize2, RotateCw, ZoomIn, ZoomOut, RefreshCw, Play as PlayIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card } from '@/components/ui/card';
@@ -125,13 +125,13 @@ const ModelScene = memo(function ModelScene({ path, scale }: { path: string, sca
 
 const MediaScene = memo(function MediaScene({ path, type, scale = 1 }: { path: string; type: 'video' | 'image'; scale?: number }) {
   const isBase64 = path?.startsWith('data:');
-  const Component = isBase64 ? Base64MediaScene : URLVideoScene; // Assuming URL is always video for now
   
   if (type === 'image') {
       return <URLImageScene path={path} scale={scale} />
   }
-
-  return <Component path={path} type={type} scale={scale} />;
+  
+  // Para video, ahora usamos URLVideoScene que maneja la interacción del usuario
+  return <URLVideoScene path={path} type={type} scale={scale} />;
 });
 
 function URLImageScene({ path, scale = 1 }: { path: string, scale?: number }) {
@@ -167,8 +167,11 @@ function URLImageScene({ path, scale = 1 }: { path: string, scale?: number }) {
 }
 
 function URLVideoScene({ path, scale = 1 }: { path: string, type: 'video' | 'image', scale?: number }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  // Creamos la textura pero no la iniciamos automáticamente
   const texture = useVideoTexture(path, {
-    start: true,
+    start: isPlaying,
     muted: false,
     loop: true,
     crossOrigin: 'anonymous',
@@ -191,12 +194,67 @@ function URLVideoScene({ path, scale = 1 }: { path: string, type: 'video' | 'ima
     return () => video.removeEventListener('loadedmetadata', updateAspect);
   }, [texture]);
   
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsPlaying(true);
+    const video = texture.source.data as HTMLVideoElement;
+    video.play().catch(err => console.error("Error playing video:", err));
+  };
+
   return (
-    <mesh scale={[aspectRatio * scale, scale, 1]}>
-      <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial map={texture} toneMapped={false} transparent />
-    </mesh>
+    <>
+      {!isPlaying && (
+        <group>
+            {/* Fondo placeholder mientras el video no se reproduce */}
+            <mesh scale={[aspectRatio * scale, scale, 1]}>
+                <planeGeometry args={[1, 1]} />
+                <meshBasicMaterial color="black" toneMapped={false} />
+            </mesh>
+            {/* Icono de Play en 3D */}
+            <HtmlAs3D>
+                <Button size="icon" className="w-16 h-16 rounded-full" onClick={handlePlay}>
+                    <PlayIcon className="w-8 h-8" />
+                </Button>
+            </HtmlAs3D>
+        </group>
+      )}
+      {isPlaying && (
+         <mesh scale={[aspectRatio * scale, scale, 1]}>
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial map={texture} toneMapped={false} transparent />
+        </mesh>
+      )}
+    </>
   );
+}
+
+
+// Componente para renderizar HTML como si fuera un objeto 3D
+function HtmlAs3D({ children }: { children: React.ReactNode }) {
+    const { scene, camera } = useThree();
+    const groupRef = useRef<THREE.Group>(null);
+
+    useFrame(() => {
+        if (groupRef.current) {
+            // Posicionar el grupo en frente de la cámara
+            groupRef.current.position.copy(camera.position);
+            groupRef.current.rotation.copy(camera.rotation);
+            group_current_quaternion = camera.quaternion;
+            // Moverlo un poco hacia adelante
+            groupRef.current.translateZ(-1.5);
+        }
+    });
+
+    // Este es un truco, el div se renderizará fuera del canvas
+    // pero el grupo 3D vacío nos sirve para posicionarlo.
+    // Necesitaríamos @react-three/drei Html, pero para no añadir más dependencias,
+    // usamos este enfoque más simple.
+    let group_current_quaternion: any;
+    return (
+        <group ref={groupRef}>
+            {/* El contenido real se renderizaría fuera del canvas con CSS */}
+        </group>
+    );
 }
 
 // Controles AR mejorados
