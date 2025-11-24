@@ -1,3 +1,4 @@
+
 const express = require('express');
 const multer = require('multer');
 const qr = require('qr-image');
@@ -12,7 +13,13 @@ const app = express();
 const PORT = 5000;
 
 // Middleware
-app.use(cors());
+// Configuración explícita de CORS para permitir todas las conexiones
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use('/qrcodes', express.static('qrcodes'));
