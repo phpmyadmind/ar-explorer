@@ -26,7 +26,7 @@ export const Header: FC = () => {
                 </h1>
             </Link>
             <div className='flex items-center gap-2'>
-                <Link href="/ar-viewer">
+                <Link href="/">
                     <Button variant="outline">
                         <Grid3x3 className='h-5 w-5 mr-2' />
                         AR Viewer

@@ -78,7 +78,7 @@ export function useARModels(): UseARModelsReturn {
                   scale: item.type === '3d-model' ? 0.015 : item.type === 'video' ? 0.5 : 1,
                   description: item.description || item.name,
                   type: item.type,
-                  url: `/ar-viewer?model=${item.uuid}`,
+                  url: `/?model=${item.uuid}`,
                 };
               }).filter((model): model is Model => model !== null);
               const allModels = [...formattedModels, ...staticModels];

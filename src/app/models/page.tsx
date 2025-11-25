@@ -30,7 +30,7 @@ export default function ModelsPage() {
 
   useEffect(() => {
     if (qrModel && typeof window !== 'undefined') {
-      const url = `${window.location.origin}/ar-viewer?model=${qrModel.id}`;
+      const url = `${window.location.origin}/?model=${qrModel.id}`;
       QRCode.toDataURL(url, { 
         width: 300, 
         margin: 2,
@@ -51,7 +51,7 @@ export default function ModelsPage() {
   }, []);
   
   const handleSelectModel = useCallback((model: Model) => {
-    router.push(`/ar-viewer?model=${model.id}`);
+    router.push(`/?model=${model.id}`);
   }, [router]);
 
   const getTypeBadgeColor = useCallback((type: string) => {
@@ -248,7 +248,7 @@ export default function ModelsPage() {
           {qrModel && typeof window !== 'undefined' && (
             <div className="text-center text-sm text-muted-foreground">
               <p>Share this code to access:</p>
-              <p className="font-mono text-xs mt-1 break-all">{window.location.origin}/ar-viewer?model={qrModel.id}</p>
+              <p className="font-mono text-xs mt-1 break-all">{window.location.origin}/?model={qrModel.id}</p>
             </div>
           )}
         </DialogContent>
