@@ -32,6 +32,17 @@ interface ARRoute {
 import { config } from '@/lib/config';
 const API_URL = config.apiUrl;
 
+const getAuthHeaders = (isJson = false) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('ar_token') : null;
+    const headers: HeadersInit = {
+        'Authorization': `Bearer ${token}`
+    };
+    if (isJson) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+};
+
 export default function RoutesPage() {
     const [routes, setRoutes] = useState<ARRoute[]>([]);
     const [resources, setResources] = useState<ARResource[]>([]);
@@ -51,16 +62,22 @@ export default function RoutesPage() {
         setError(null);
         try {
             const [routesRes, resourcesRes] = await Promise.all([
-                fetch(`${API_URL}/api/routes`),
-                fetch(`${API_URL}/api/resources`)
+                fetch(`${API_URL}/api/routes`, { headers: getAuthHeaders() }),
+                fetch(`${API_URL}/api/resources`, { headers: getAuthHeaders() })
             ]);
+            
+            if (routesRes.status === 401 || resourcesRes.status === 401) {
+                throw new Error('Authentication failed. Please log in again.');
+            }
+
             if (!routesRes.ok || !resourcesRes.ok) throw new Error('Network response was not ok');
+
             const routesData = await routesRes.json();
             const resourcesData = await resourcesRes.json();
             setRoutes(routesData);
             setResources(resourcesData);
         } catch (err) {
-            setError('Failed to fetch data. Make sure the backend server is running.');
+            setError('Failed to fetch data. Make sure the backend server is running and you are logged in.');
             console.error(err);
         } finally {
             setLoading(false);
@@ -124,7 +141,7 @@ export default function RoutesPage() {
         try {
             const response = await fetch(`${API_URL}/api/routes`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(true),
                 body: JSON.stringify(routeData),
             });
 
@@ -153,7 +170,10 @@ export default function RoutesPage() {
     const deleteRoute = async (uuid: string) => {
         if (!confirm('Are you sure you want to delete this route? This action is permanent.')) return;
         try {
-            const response = await fetch(`${API_URL}/api/routes/${uuid}`, { method: 'DELETE' });
+            const response = await fetch(`${API_URL}/api/routes/${uuid}`, { 
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
             if (!response.ok) throw new Error('Failed to delete route');
             fetchData();
         } catch (err: any) {

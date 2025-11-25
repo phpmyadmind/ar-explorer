@@ -10,6 +10,14 @@ interface UseARModelsReturn {
   refetch: () => Promise<void>;
 }
 
+const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('ar_token') : null;
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+};
+
 export function useARModels(): UseARModelsReturn {
   const [models, setModels] = useState<Model[]>(staticModels);
   const [loading, setLoading] = useState(true);
@@ -20,17 +28,20 @@ export function useARModels(): UseARModelsReturn {
     setError(null);
     
     try {
-      const apiUrl = `${config.apiBaseUrl}/resources`;
+      const apiUrl = `${config.apiUrl}/api/resources`;
       console.log('🔍 Fetching resources from:', apiUrl);
       
       const response = await fetch(apiUrl, {
         cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       console.log('📡 Response status:', response.status, response.statusText);
+      
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') window.location.href = '/'; // Redirect to login
+        throw new Error('Authentication failed. Please log in.');
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -42,7 +53,6 @@ export function useARModels(): UseARModelsReturn {
       console.log('✅ Received resources:', data.length, 'items');
       
       const formattedModels: Model[] = data.map((item: any) => {
-        // Usar siempre content_url de la base de datos
         let contentPath = item.content_url;
         
         if (!contentPath) {
@@ -50,15 +60,11 @@ export function useARModels(): UseARModelsReturn {
           return null;
         }
         
-        // Construir URL completa si es relativa
         if (contentPath.startsWith('http://') || contentPath.startsWith('https://')) {
-          // URL completa, usar tal cual
-          contentPath = contentPath;
+          // Full URL, use as is
         } else if (contentPath.startsWith('/')) {
-          // URL relativa que empieza con /
           contentPath = `${config.apiUrl}${contentPath}`;
         } else {
-          // URL relativa sin /
           contentPath = `${config.apiUrl}/${contentPath}`;
         }
         
@@ -72,14 +78,12 @@ export function useARModels(): UseARModelsReturn {
           scale: item.type === '3d-model' ? 0.015 : item.type === 'video' ? 0.5 : 1,
           description: item.description || item.name,
           type: item.type,
-          url: `/?model=${item.uuid}`,
+          url: `/ar-viewer?model=${item.uuid}`,
         };
       }).filter((model): model is Model => model !== null);
 
       console.log('📦 Formatted models:', formattedModels.length, 'from API');
-      console.log('📦 Static models:', staticModels.length);
       const allModels = [...formattedModels, ...staticModels];
-      console.log('📦 Total models:', allModels.length);
       
       setModels(allModels);
     } catch (err: any) {
@@ -103,4 +107,3 @@ export function useARModels(): UseARModelsReturn {
     refetch: fetchModels,
   };
 }
-

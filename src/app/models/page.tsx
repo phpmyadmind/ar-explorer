@@ -23,14 +23,6 @@ import {
 export default function ModelsPage() {
   const { models, loading, error, refetch } = useARModels();
   const router = useRouter();
-  
-  // Debug: Log models cuando cambian
-  useEffect(() => {
-    console.log('📚 ModelsPage - Models updated:', {
-      count: models.length,
-      models: models.map(m => ({ id: m.id, name: m.name, type: m.type, path: m.path }))
-    });
-  }, [models]);
 
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [qrModel, setQrModel] = useState<Model | null>(null);
@@ -38,7 +30,7 @@ export default function ModelsPage() {
 
   useEffect(() => {
     if (qrModel && typeof window !== 'undefined') {
-      const url = `${window.location.origin}/?model=${qrModel.id}`;
+      const url = `${window.location.origin}/ar-viewer?model=${qrModel.id}`;
       QRCode.toDataURL(url, { 
         width: 300, 
         margin: 2,
@@ -59,7 +51,7 @@ export default function ModelsPage() {
   }, []);
   
   const handleSelectModel = useCallback((model: Model) => {
-    router.push(`/?model=${model.id}`);
+    router.push(`/ar-viewer?model=${model.id}`);
   }, [router]);
 
   const getTypeBadgeColor = useCallback((type: string) => {
@@ -104,7 +96,7 @@ export default function ModelsPage() {
         </CardHeader>
         <CardContent>
           {error && (
-            <Alert variant="default" className="mb-4">
+            <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Connection Notice</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
@@ -253,10 +245,10 @@ export default function ModelsPage() {
               </div>
             )}
           </div>
-          {qrModel && (
+          {qrModel && typeof window !== 'undefined' && (
             <div className="text-center text-sm text-muted-foreground">
               <p>Share this code to access:</p>
-              <p className="font-mono text-xs mt-1 break-all">{window.location.origin}/?model={qrModel.id}</p>
+              <p className="font-mono text-xs mt-1 break-all">{window.location.origin}/ar-viewer?model={qrModel.id}</p>
             </div>
           )}
         </DialogContent>

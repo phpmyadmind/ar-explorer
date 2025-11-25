@@ -29,7 +29,7 @@ export const staticModels: Model[] = [
     scale: 0.5,
     description: "Videoarte EOT",
     type: 'video',
-    url: '/?model=que-me-esta-pasando'
+    url: '/ar-viewer?model=que-me-esta-pasando'
   },
   {
     id: 'no-aguanto-mas',
@@ -39,7 +39,7 @@ export const staticModels: Model[] = [
     scale: 0.5,
     description: "Videoarte EOT",
     type: 'video',
-    url: '/?model=no-aguanto-mas'
+    url: '/ar-viewer?model=no-aguanto-mas'
   },
   {
     id: 'tercer-video',
@@ -49,7 +49,7 @@ export const staticModels: Model[] = [
     scale: 3,
     description: "Videoarte EOT",
     type: 'video',
-    url: '/?model=tercer-video'
+    url: '/ar-viewer?model=tercer-video'
   },
   {
     id: 'armchair',
@@ -59,7 +59,7 @@ export const staticModels: Model[] = [
     scale: 3,
     description: "A comfy-looking armchair.",
     type: '3d-model',
-    url: '/?model=armchair'
+    url: '/ar-viewer?model=armchair'
   },
   {
     id: 'bonsai',
@@ -69,7 +69,7 @@ export const staticModels: Model[] = [
     scale: 3,
     description: "A detailed bonsai tree model.",
     type: '3d-model',
-    url: '/?model=bonsai'
+    url: '/ar-viewer?model=bonsai'
   },
   {
     id: 'lamp',
@@ -79,6 +79,6 @@ export const staticModels: Model[] = [
     scale: 3,
     description: "A modern desk lamp.",
     type: '3d-model',
-    url: '/?model=lamp'
+    url: '/ar-viewer?model=lamp'
   }
 ];

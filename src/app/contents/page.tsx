@@ -27,6 +27,13 @@ interface ARResource {
 import { config } from '@/lib/config';
 const API_URL = config.apiUrl;
 
+const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('ar_token') : null;
+    return {
+        'Authorization': `Bearer ${token}`
+    };
+};
+
 export default function ContentsPage() {
     const [resources, setResources] = useState<ARResource[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,12 +57,19 @@ export default function ContentsPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_URL}/api/resources`);
-            if (!response.ok) throw new Error('Network response was not ok');
+            const response = await fetch(`${API_URL}/api/resources`, {
+                headers: getAuthHeaders()
+            });
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please log in again.');
+                }
+                throw new Error('Network response was not ok');
+            }
             const data = await response.json();
             setResources(data);
         } catch (err) {
-            setError('Failed to fetch resources. Make sure the backend server is running.');
+            setError('Failed to fetch resources. Make sure the backend server is running and you are logged in.');
             console.error(err);
         } finally {
             setLoading(false);
@@ -71,7 +85,6 @@ export default function ContentsPage() {
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         
-        // Validación de datos
         if (!editingResource && !file) {
             setError('Por favor, selecciona un archivo.');
             return;
@@ -103,6 +116,7 @@ export default function ContentsPage() {
             
             const response = await fetch(url, {
                 method: editingResource ? 'PUT' : 'POST',
+                headers: { ...getAuthHeaders() },
                 body: formData,
             });
 
@@ -114,9 +128,8 @@ export default function ContentsPage() {
                 throw new Error(`${errorMessage}${errorDetails}`);
             }
 
-            // Éxito
-            fetchResources(); // Recargar la lista
-            resetForm(); // Resetear formulario
+            fetchResources();
+            resetForm();
         } catch (err: any) {
             const errorMessage = err.message || `Error desconocido al ${editingResource ? 'actualizar' : 'crear'} el recurso`;
             setError(errorMessage);
@@ -152,6 +165,7 @@ export default function ContentsPage() {
         try {
             const response = await fetch(`${API_URL}/api/resources/${uuid}`, {
                 method: 'DELETE',
+                headers: getAuthHeaders(),
             });
             if (!response.ok) {
                 throw new Error('Failed to delete resource');
