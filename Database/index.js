@@ -16,15 +16,11 @@ const authMiddleware = require('./middleware/auth');
 const app = express();
 const PORT = 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-very-secret-key-that-is-long';
+const SERVICE_USER_USERNAME = 'service_user';
+const SERVICE_USER_PASSWORD = 'default_password_for_service_account'; // Use a more secure password in a real env
 
 // Middleware
-// Habilitar CORS para todos los orígenes
-app.use(cors({
-  origin: '*', // Permite todas las solicitudes de cualquier origen
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
+app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use('/qrcodes', express.static('qrcodes'));
@@ -116,6 +112,33 @@ const fileToBase64 = (filePath) => {
 };
 
 // --- Rutas de autenticación ---
+// Endpoint para obtener un token de servicio automáticamente
+app.post('/api/auth/token', async (req, res) => {
+    try {
+        let [rows] = await pool.execute('SELECT * FROM ar_users WHERE username = ?', [SERVICE_USER_USERNAME]);
+        let user = rows[0];
+
+        // Si el usuario de servicio no existe, créalo
+        if (!user) {
+            console.log(`Creating service user: ${SERVICE_USER_USERNAME}`);
+            const hashedPassword = await bcrypt.hash(SERVICE_USER_PASSWORD, 10);
+            const [result] = await pool.execute(
+                'INSERT INTO ar_users (username, password) VALUES (?, ?)',
+                [SERVICE_USER_USERNAME, hashedPassword]
+            );
+            user = { id: result.insertId, username: SERVICE_USER_USERNAME };
+        }
+
+        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1d' });
+        res.json({ token });
+
+    } catch (error) {
+        console.error('Error getting service token:', error);
+        res.status(500).json({ error: 'Failed to generate service token' });
+    }
+});
+
+
 app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {

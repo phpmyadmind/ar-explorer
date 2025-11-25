@@ -39,7 +39,7 @@ function ARViewerPageContent() {
     }
   }, [modelIdFromUrl, selectedModelFromUrl, loading]);
   
-  if (loading) {
+  if (loading && !selectedModel) {
     return (
       <div className="flex h-svh w-full flex-col bg-background text-foreground">
         <Header />

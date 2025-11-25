@@ -1,102 +1,107 @@
-// src/app/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Header } from '@/components/ar-explorer/header';
+import { type Model } from '@/lib/models';
+import { useARModels } from '@/hooks/use-ar-models';
+import { ErrorBoundary } from '@/components/ar-explorer/error-boundary';
+import { ARViewerWrapper } from '@/components/ar-explorer/ar-viewer-wrapper';
+import { Loader2, Box, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Loader2 } from 'lucide-react';
-import { config } from '@/lib/config';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
 
-export default function LoginPage() {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const router = useRouter();
+function ARViewerPageContent() {
+  const { models, loading, error } = useARModels();
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const searchParams = useSearchParams();
+  const modelIdFromUrl = searchParams.get('model');
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
+  const selectedModelFromUrl = useMemo(() => {
+    if (!modelIdFromUrl || loading || models.length === 0) {
+      return null;
+    }
+    return models.find(m => m.id === modelIdFromUrl) || null;
+  }, [modelIdFromUrl, models, loading]);
 
-        try {
-            const response = await fetch(`${config.apiUrl}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password }),
-            });
+  useEffect(() => {
+    if (loading) return; // Wait for models to load
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Invalid credentials');
-            }
-
-            // Guardar token en localStorage
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('ar_token', data.token);
-            }
-            
-            // Redirigir al panel principal
-            router.push('/models');
-
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    if (selectedModelFromUrl) {
+      setSelectedModel(selectedModelFromUrl);
+    } else if (modelIdFromUrl) {
+      console.warn(`Model with id ${modelIdFromUrl} not found`);
+      setSelectedModel(null);
+    } else {
+        // No model in URL, show welcome/selection screen
+        setSelectedModel(null);
+    }
+  }, [modelIdFromUrl, selectedModelFromUrl, loading]);
+  
+  if (loading && !selectedModel) {
     return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <CardTitle className="text-2xl">AR Platform Login</CardTitle>
-                    <CardDescription>Enter your credentials to access the AR content manager.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {error && (
-                            <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                                <AlertCircle className="h-4 w-4" />
-                                <span>{error}</span>
-                            </div>
-                        )}
-                        <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
-                            <Input
-                                id="username"
-                                type="text"
-                                placeholder="admin"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <Button type="submit" className="w-full" disabled={loading}>
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Log In
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
+      <div className="flex h-svh w-full flex-col bg-background text-foreground">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading AR models...</p>
+          </div>
+        </main>
+      </div>
     );
+  }
+
+  return (
+    <div className="flex h-svh w-full flex-col bg-background text-foreground">
+      <Header />
+      <main className="flex flex-1 flex-col overflow-hidden relative">
+        {error && (
+          <Alert variant="destructive" className="m-4 mb-0">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Connection Notice</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="relative flex-grow bg-black">
+          <ErrorBoundary>
+            <ARViewerWrapper model={selectedModel} />
+          </ErrorBoundary>
+          
+          {!selectedModel && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+                <div className="text-center p-8 bg-card/80 rounded-lg shadow-2xl max-w-md mx-4">
+                    <Box className="mx-auto h-12 w-12 text-primary"/>
+                <h2 className="mt-4 text-2xl font-bold text-card-foreground">
+                  Welcome to the AR Viewer
+                </h2>
+                <p className="text-muted-foreground mt-2">
+                  Select a model from the library to get started.
+                </p>
+                <div className="mt-6 flex gap-3 justify-center">
+                  <Button asChild>
+                        <Link href="/models">Browse Models</Link>
+                    </Button>
+                </div>
+                </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function ARViewerPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-svh w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    }>
+      <ARViewerPageContent />
+    </Suspense>
+  );
 }

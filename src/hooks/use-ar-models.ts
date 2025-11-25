@@ -11,9 +11,14 @@ interface UseARModelsReturn {
 }
 
 const getAuthHeaders = () => {
+    // AuthProvider ensures the token is in localStorage before this hook runs.
     const token = typeof window !== 'undefined' ? localStorage.getItem('ar_token') : null;
+    if (!token) {
+        // This case should ideally not be reached if AuthProvider is working correctly.
+        console.warn('Auth token not found in localStorage.');
+        return {};
+    }
     return {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
     };
 };
@@ -27,20 +32,29 @@ export function useARModels(): UseARModelsReturn {
     setLoading(true);
     setError(null);
     
+    const headers = getAuthHeaders();
+    if (!headers.Authorization) {
+        setError('Authentication token is missing. The application cannot fetch resources.');
+        setLoading(false);
+        setModels(staticModels); // Fallback to static models
+        return;
+    }
+
     try {
       const apiUrl = `${config.apiUrl}/api/resources`;
       console.log('🔍 Fetching resources from:', apiUrl);
       
       const response = await fetch(apiUrl, {
         cache: 'no-store',
-        headers: getAuthHeaders(),
+        headers: headers,
       });
 
       console.log('📡 Response status:', response.status, response.statusText);
       
       if (response.status === 401) {
-        if (typeof window !== 'undefined') window.location.href = '/'; // Redirect to login
-        throw new Error('Authentication failed. Please log in.');
+        // Token might be expired, clear it so AuthProvider can fetch a new one on reload.
+        if (typeof window !== 'undefined') localStorage.removeItem('ar_token');
+        throw new Error('Authentication failed (token may be expired). Please reload.');
       }
 
       if (!response.ok) {
@@ -97,7 +111,11 @@ export function useARModels(): UseARModelsReturn {
   }, []);
 
   useEffect(() => {
-    fetchModels();
+    // We rely on AuthProvider to be ready first.
+    // A small delay to ensure localStorage is populated.
+    setTimeout(() => {
+        fetchModels();
+    }, 100);
   }, [fetchModels]);
 
   return {
