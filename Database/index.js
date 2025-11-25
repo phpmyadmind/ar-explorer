@@ -6,15 +6,24 @@ const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 const { pool, initializeDatabase } = require('./config/config');
 const { normalizeForDB, validateResourceData, normalizeParams } = require('./utils/validation');
+const authMiddleware = require('./middleware/auth');
 
 const app = express();
 const PORT = 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-very-secret-key-that-is-long';
 
 // Middleware
-// Configuración simple de CORS para permitir todas las conexiones.
-app.use(cors());
+// Habilitar CORS para todos los orígenes
+app.use(cors({
+  origin: '*', // Permite todas las solicitudes de cualquier origen
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
@@ -106,8 +115,59 @@ const fileToBase64 = (filePath) => {
   }
 };
 
+// --- Rutas de autenticación ---
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const [result] = await pool.execute(
+      'INSERT INTO ar_users (username, password) VALUES (?, ?)',
+      [username, hashedPassword]
+    );
+    res.status(201).json({ id: result.insertId, username });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Username already exists' });
+    }
+    console.error('Error registering user:', error);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  try {
+    const [rows] = await pool.execute('SELECT * FROM ar_users WHERE username = ?', [username]);
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1d' });
+    res.json({ token });
+  } catch (error) {
+    console.error('Error logging in:', error);
+    res.status(500).json({ error: 'Failed to log in' });
+  }
+});
+
+
 // Crear nuevo recurso AR
-app.post('/api/resources', upload.single('content'), async (req, res) => {
+app.post('/api/resources', authMiddleware, upload.single('content'), async (req, res) => {
   let connection;
   try {
     // Validar datos de entrada
@@ -262,7 +322,7 @@ app.post('/api/resources', upload.single('content'), async (req, res) => {
 });
 
 // Obtener todos los recursos con estadísticas
-app.get('/api/resources', async (req, res) => {
+app.get('/api/resources', authMiddleware, async (req, res) => {
   try {
     // No incluir content_base64 en la lista (es muy grande)
     const [rows] = await pool.execute(`
@@ -359,7 +419,7 @@ app.get('/api/resources/:uuid', async (req, res) => {
 });
 
 // Obtener estadísticas de uso
-app.get('/api/resources/:uuid/stats', async (req, res) => {
+app.get('/api/resources/:uuid/stats', authMiddleware, async (req, res) => {
   try {
     const { uuid } = req.params;
     
@@ -381,7 +441,7 @@ app.get('/api/resources/:uuid/stats', async (req, res) => {
 });
 
 // Actualizar recurso
-app.put('/api/resources/:uuid', upload.single('content'), async (req, res) => {
+app.put('/api/resources/:uuid', authMiddleware, upload.single('content'), async (req, res) => {
   let connection;
   try {
     const { uuid } = req.params;
@@ -482,7 +542,7 @@ app.put('/api/resources/:uuid', upload.single('content'), async (req, res) => {
 });
 
 // Eliminar recurso
-app.delete('/api/resources/:uuid', async (req, res) => {
+app.delete('/api/resources/:uuid', authMiddleware, async (req, res) => {
   try {
     const { uuid } = req.params;
     
@@ -507,7 +567,7 @@ app.delete('/api/resources/:uuid', async (req, res) => {
 // --- Rutas para AR Routes ---
 
 // Crear una nueva ruta
-app.post('/api/routes', async (req, res) => {
+app.post('/api/routes', authMiddleware, async (req, res) => {
     let connection;
     try {
         const { name, description, steps } = req.body; // steps: [{ resource_uuid, step_order }]
@@ -564,7 +624,7 @@ app.post('/api/routes', async (req, res) => {
 
 
 // Obtener todas las rutas
-app.get('/api/routes', async (req, res) => {
+app.get('/api/routes', authMiddleware, async (req, res) => {
     try {
         const [routes] = await pool.execute(`
             SELECT r.uuid, r.name, r.description, r.qr_code_url, r.created_at, COUNT(rs.id) as step_count
@@ -611,7 +671,7 @@ app.get('/api/routes/:uuid', async (req, res) => {
 });
 
 // Eliminar una ruta
-app.delete('/api/routes/:uuid', async (req, res) => {
+app.delete('/api/routes/:uuid', authMiddleware, async (req, res) => {
     try {
         const { uuid } = req.params;
         
@@ -632,7 +692,7 @@ app.delete('/api/routes/:uuid', async (req, res) => {
 
 
 // Endpoint para obtener métricas generales
-app.get('/api/metrics', async (req, res) => {
+app.get('/api/metrics', authMiddleware, async (req, res) => {
   try {
     const [totalResources] = await pool.execute(
       'SELECT COUNT(*) as total FROM ar_resources'
@@ -688,4 +748,5 @@ const startServer = async () => {
 };
 
 startServer();
+
 

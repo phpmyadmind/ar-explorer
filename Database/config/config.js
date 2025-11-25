@@ -89,6 +89,15 @@ const initializeDatabase = async () => {
 };
 
 const createTables = async () => {
+  const createUsersTable = `
+    CREATE TABLE IF NOT EXISTS ar_users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      username VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `;
+    
   const createResourcesTable = `
     CREATE TABLE IF NOT EXISTS ar_resources (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -159,6 +168,7 @@ const createTables = async () => {
   `;
 
   try {
+    await pool.execute(createUsersTable);
     await pool.execute(createResourcesTable);
     await pool.execute(createMarkersTable);
     await pool.execute(createUsageTable);
