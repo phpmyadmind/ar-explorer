@@ -15,12 +15,18 @@ const authMiddleware = require('./middleware/auth');
 
 const app = express();
 const PORT = 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-very-secret-key-that-is-long';
+const JWT_SECRET = process.env.JWT_SECRET || '476499bb-af5b-4dfd-a8b4-92c032c51e64';
 const SERVICE_USER_USERNAME = 'service_user';
 const SERVICE_USER_PASSWORD = 'default_password_for_service_account'; // Use a more secure password in a real env
 
 // Middleware
-app.use(cors());
+// Configurar CORS para permitir cualquier origen
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use('/qrcodes', express.static('qrcodes'));
@@ -112,28 +118,31 @@ const fileToBase64 = (filePath) => {
 };
 
 // --- Rutas de autenticación ---
-// Endpoint para obtener un token de servicio automáticamente
+// Endpoint para generar token sin autenticación de usuario
+// El frontend puede generar tokens directamente sin necesidad de usuario/contraseña
 app.post('/api/auth/token', async (req, res) => {
     try {
-        let [rows] = await pool.execute('SELECT * FROM ar_users WHERE username = ?', [SERVICE_USER_USERNAME]);
-        let user = rows[0];
-
-        // Si el usuario de servicio no existe, créalo
-        if (!user) {
-            console.log(`Creating service user: ${SERVICE_USER_USERNAME}`);
-            const hashedPassword = await bcrypt.hash(SERVICE_USER_PASSWORD, 10);
-            const [result] = await pool.execute(
-                'INSERT INTO ar_users (username, password) VALUES (?, ?)',
-                [SERVICE_USER_USERNAME, hashedPassword]
-            );
-            user = { id: result.insertId, username: SERVICE_USER_USERNAME };
-        }
-
-        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '1d' });
+        console.log('🔑 Token generation request received');
+        
+        // Generar token simple sin necesidad de usuario en la base de datos
+        // El payload puede ser cualquier información necesaria
+        const payload = {
+            id: 'service',
+            username: 'frontend',
+            type: 'service_token',
+            iat: Math.floor(Date.now() / 1000)
+        };
+        
+        console.log('🔑 Generating token with payload:', payload);
+        console.log('🔑 Using JWT_SECRET:', JWT_SECRET ? '***' : 'NOT SET');
+        
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+        
+        console.log('✅ Token generated successfully');
         res.json({ token });
 
     } catch (error) {
-        console.error('Error getting service token:', error);
+        console.error('❌ Error getting service token:', error);
         res.status(500).json({ error: 'Failed to generate service token' });
     }
 });

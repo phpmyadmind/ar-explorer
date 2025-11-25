@@ -1,4 +1,9 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/ar-viewer/page": "app/ar-viewer/page.js",
+  "/contents/routes/page": "app/contents/routes/page.js",
+  "/contents/page": "app/contents/page.js",
   "/page": "app/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/models/page": "app/models/page.js"
 }
